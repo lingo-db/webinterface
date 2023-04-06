@@ -12,59 +12,13 @@ import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faPlay} from '@fortawesome/free-solid-svg-icons';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import {queries, QueryList, Query} from "./query_data";
-import SyntaxHighlighter from 'react-syntax-highlighter';
-import {atomOneLight} from 'react-syntax-highlighter/dist/cjs/styles/hljs';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/atom-one-dark.css';
 import CodeBlock from "./CodeBlock";
-interface QueryResult {
-    timing: {
-        'QOpt': number
-        'lowerRelAlg': number,
-        'lowerSubOp': number,
-        'lowerDB': number,
-        'lowerDSA': number,
-        'lowerToLLVM': number,
-        'toLLVMIR': number,
-        'llvmOptimize': number,
-        'llvmCodeGen': number,
-        'executionTime': number,
-        'total': number
-    }
-    result: {
-        columns: string[];
-        rows: string[][];
-    }
-}
+import {MLIRSteps, MLIRViewer} from "./MLIRViewer";
+import {QueryResult, ResultViewer} from "./ResultViewer";
+import {QueryPlanViewer} from "./QueryPlanViewer";
 
-const ResultTable = ({timing, result}: QueryResult) => {
-    return (
-        <div style={{height: '50vh', overflow: 'auto'}}>
-            <p>Execution: {(timing.executionTime).toFixed(1)} ms</p>
-            <p>Optimization: {(timing.QOpt).toFixed(1)} ms</p>
-            <p>Compilation: {(timing.lowerRelAlg + timing.lowerSubOp + timing.lowerDB + timing.lowerDSA + timing.lowerToLLVM + timing.toLLVMIR + timing.llvmOptimize + timing.llvmCodeGen).toFixed(1)} ms</p>
-
-            <Table striped bordered style={{tableLayout: 'fixed'}}>
-                <thead>
-                <tr>
-                    {result.columns.map((column: string, index: number) => (
-                        <th key={index}>{column}</th>
-                    ))}
-                </tr>
-                </thead>
-                <tbody>
-                {result.rows.map((row: string[], index: number) => (
-                    <tr key={index}>
-                        {row.map((cell, index) => (
-                            <td key={index}>{cell}</td>
-                        ))}
-                    </tr>
-                ))}
-                </tbody>
-            </Table>
-        </div>
-    );
-};
 
 interface QuerySelectionProps {
     db: string
@@ -91,51 +45,6 @@ const QuerySelection = ({db, cb}: QuerySelectionProps) => {
     }
 }
 
-interface MLIRSteps {
-    canonical: string;
-    qopt: string;
-    subop: string;
-    imperative: string;
-    lowlevel: string;
-}
-
-interface MLIRDisplayProps {
-    steps: MLIRSteps
-}
-
-const MLIRDisplay = ({steps}: MLIRDisplayProps) => {
-    const [activeTab, setActiveTab] = useState<string>('canonical');
-    const handleTabSelect = (eventKey: string | null) => {
-        if (eventKey) {
-            setActiveTab(eventKey);
-        }
-    };
-    return (
-        <div style={{height: '50vh', overflow: 'auto'}}>
-            <Tabs activeKey={activeTab} unmountOnExit={true}
-                  mountOnEnter={true}
-                  transition={false} onSelect={handleTabSelect}>
-                <Tab eventKey="canonical" title="Canonical">
-                    <CodeBlock language="mlir" code={steps.canonical}/>
-                </Tab>
-                <Tab eventKey="qopt" title="Optimized">
-                    <CodeBlock language="mlir" code={steps.qopt}/>
-                </Tab>
-                <Tab eventKey="subop" title="Sub-Operators">
-                    <CodeBlock language="mlir" code={steps.subop}/>
-                </Tab>
-                <Tab eventKey="imperative" title="Imperative">
-                    <CodeBlock language="mlir" code={steps.imperative}/>
-                </Tab>
-                <Tab eventKey="lowlevel" title="Low-Level">
-                    <CodeBlock language="mlir" code={steps.lowlevel}/>
-
-                </Tab>
-            </Tabs>
-        </div>
-    );
-}
-
 
 interface SelectedDB {
     label: string;
@@ -147,9 +56,12 @@ function App() {
     const editorRef = useRef(null);
     const [query, setQuery] = useState(queries["tpch-1"][0].content)
     const [queryResult, setQueryResult] = useState<QueryResult | undefined>(undefined)
-
+    const [queryResultLoading , setQueryResultLoading] =useState<boolean>(false);
     const [queryPlan, setQueryPlan] = useState<PlanGraphElement | undefined>(undefined)
+    const [queryPlanLoading , setQueryPlanLoading] =useState<boolean>(false);
     const [mlirSteps, setMlirSteps] = useState<MLIRSteps | undefined>(undefined)
+    const [mlirStepsLoading, setMlirStepsLoading] = useState<boolean>(false)
+    const [showResults, setShowResults] = useState<boolean>(false)
 
     const [selectedDB, setSelectedDB] = useState<SelectedDB>({
         label: 'TPC-H (SF1)',
@@ -169,25 +81,30 @@ function App() {
         }
     }
     const fetchQueryPlan = async () => {
+        setQueryPlanLoading(true)
         const response = await fetch(`http://localhost:8000/query_plan?database=${selectedDB.value}&query=${encodeURIComponent(query)}`);
         const data = await response.json();
-        console.log(data.name)
         setQueryPlan((new NormalizePlan(data)).getGraph());
+        setQueryPlanLoading(false)
     }
     const fetchQueryResult = async () => {
-        console.log(query)
+        setQueryResultLoading(true)
         const response = await fetch(`http://localhost:8000/execute?database=${selectedDB.value}&query=${encodeURIComponent(query)}`);
         setQueryResult(await response.json());
+        setQueryResultLoading(false)
     }
     const fetchMLIRSteps = async () => {
-        console.log(query)
+        setMlirStepsLoading(true)
         const response = await fetch(`http://localhost:8000/mlir_steps?database=${selectedDB.value}&query=${encodeURIComponent(query)}`);
         setMlirSteps(await response.json());
+        setMlirStepsLoading(false)
     }
     const handleExecute = () => {
-        fetchQueryResult()
+        setShowResults(true)
         setActiveTab('result')
         setQueryPlan(undefined)
+        setMlirSteps(undefined)
+        fetchQueryResult()
     };
 
     const [activeTab, setActiveTab] = useState<string>('result');
@@ -231,33 +148,21 @@ function App() {
                     <QuerySelection db={selectedDB.value} cb={(content) => setQuery(content)}></QuerySelection>
                 </ButtonGroup>
             </div>
-            {queryResult &&
+            {showResults &&
                 <Tabs activeKey={activeTab} onSelect={handleTabSelect}>
                     <Tab eventKey="result" title="Result">
-                        {queryResult &&
-                            <ResultTable result={queryResult.result} timing={queryResult.timing}></ResultTable>
-                        }
+                        <ResultViewer result={queryResult} loading={queryResultLoading}/>
                     </Tab>
                     <Tab eventKey="queryPlan" title="QueryPlan">
                         <div style={{height: '50vh', backgroundColor: "gray"}}>
-                            {queryPlan &&
-
-                                <GraphComponent
-                                    rootElement={queryPlan}
-                                />
-                            }
+                            <QueryPlanViewer plan={queryPlan} loading={queryPlanLoading}/>
                         </div>
                     </Tab>
                     <Tab eventKey="mlir" title="MLIR">
-                        {mlirSteps &&
-                            <MLIRDisplay
-                                steps={mlirSteps}
-                            />
-                        }
+                        <MLIRViewer steps={mlirSteps} loading={mlirStepsLoading}/>
                     </Tab>
                 </Tabs>
             }
-
         </div>
     );
 }

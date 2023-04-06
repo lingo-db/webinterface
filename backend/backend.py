@@ -785,5 +785,4 @@ async def mlir_steps(database: str, query: str):
         "subop": subop,
         "imperative": imperative,
         "lowlevel":lowlevel,
-        "llvm":""
     }

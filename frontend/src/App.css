@@ -39,3 +39,13 @@
   max-height: 280px;
   overflow-y: auto;
 }
+.spinner-overlay {
+  position: relative;
+}
+
+.spinner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
