@@ -12,7 +12,11 @@ import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faPlay} from '@fortawesome/free-solid-svg-icons';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import {queries, QueryList, Query} from "./query_data";
-
+import SyntaxHighlighter from 'react-syntax-highlighter';
+import {atomOneLight} from 'react-syntax-highlighter/dist/cjs/styles/hljs';
+import hljs from 'highlight.js';
+import 'highlight.js/styles/atom-one-dark.css';
+import CodeBlock from "./CodeBlock";
 interface QueryResult {
     timing: {
         'QOpt': number
@@ -33,12 +37,12 @@ interface QueryResult {
     }
 }
 
-const ResultTable = ({timing,result}: QueryResult) => {
+const ResultTable = ({timing, result}: QueryResult) => {
     return (
         <div style={{height: '50vh', overflow: 'auto'}}>
             <p>Execution: {(timing.executionTime).toFixed(1)} ms</p>
             <p>Optimization: {(timing.QOpt).toFixed(1)} ms</p>
-            <p>Compilation: {(timing.lowerRelAlg+timing.lowerSubOp+timing.lowerDB+timing.lowerDSA+timing.lowerToLLVM+timing.toLLVMIR+timing.llvmOptimize+timing.llvmCodeGen).toFixed(1)} ms</p>
+            <p>Compilation: {(timing.lowerRelAlg + timing.lowerSubOp + timing.lowerDB + timing.lowerDSA + timing.lowerToLLVM + timing.toLLVMIR + timing.llvmOptimize + timing.llvmCodeGen).toFixed(1)} ms</p>
 
             <Table striped bordered style={{tableLayout: 'fixed'}}>
                 <thead>
@@ -87,6 +91,52 @@ const QuerySelection = ({db, cb}: QuerySelectionProps) => {
     }
 }
 
+interface MLIRSteps {
+    canonical: string;
+    qopt: string;
+    subop: string;
+    imperative: string;
+    lowlevel: string;
+}
+
+interface MLIRDisplayProps {
+    steps: MLIRSteps
+}
+
+const MLIRDisplay = ({steps}: MLIRDisplayProps) => {
+    const [activeTab, setActiveTab] = useState<string>('canonical');
+    const handleTabSelect = (eventKey: string | null) => {
+        if (eventKey) {
+            setActiveTab(eventKey);
+        }
+    };
+    return (
+        <div style={{height: '50vh', overflow: 'auto'}}>
+            <Tabs activeKey={activeTab} unmountOnExit={true}
+                  mountOnEnter={true}
+                  transition={false} onSelect={handleTabSelect}>
+                <Tab eventKey="canonical" title="Canonical">
+                    <CodeBlock language="mlir" code={steps.canonical}/>
+                </Tab>
+                <Tab eventKey="qopt" title="Optimized">
+                    <CodeBlock language="mlir" code={steps.qopt}/>
+                </Tab>
+                <Tab eventKey="subop" title="Sub-Operators">
+                    <CodeBlock language="mlir" code={steps.subop}/>
+                </Tab>
+                <Tab eventKey="imperative" title="Imperative">
+                    <CodeBlock language="mlir" code={steps.imperative}/>
+                </Tab>
+                <Tab eventKey="lowlevel" title="Low-Level">
+                    <CodeBlock language="mlir" code={steps.lowlevel}/>
+
+                </Tab>
+            </Tabs>
+        </div>
+    );
+}
+
+
 interface SelectedDB {
     label: string;
     value: string;
@@ -99,6 +149,8 @@ function App() {
     const [queryResult, setQueryResult] = useState<QueryResult | undefined>(undefined)
 
     const [queryPlan, setQueryPlan] = useState<PlanGraphElement | undefined>(undefined)
+    const [mlirSteps, setMlirSteps] = useState<MLIRSteps | undefined>(undefined)
+
     const [selectedDB, setSelectedDB] = useState<SelectedDB>({
         label: 'TPC-H (SF1)',
         value: 'tpch-1',
@@ -127,11 +179,17 @@ function App() {
         const response = await fetch(`http://localhost:8000/execute?database=${selectedDB.value}&query=${encodeURIComponent(query)}`);
         setQueryResult(await response.json());
     }
+    const fetchMLIRSteps = async () => {
+        console.log(query)
+        const response = await fetch(`http://localhost:8000/mlir_steps?database=${selectedDB.value}&query=${encodeURIComponent(query)}`);
+        setMlirSteps(await response.json());
+    }
     const handleExecute = () => {
         fetchQueryResult()
         setActiveTab('result')
         setQueryPlan(undefined)
     };
+
     const [activeTab, setActiveTab] = useState<string>('result');
 
     const handleTabSelect = (eventKey: string | null) => {
@@ -140,6 +198,9 @@ function App() {
             console.log(`Selected tab: ${eventKey}`);
             if (eventKey === "queryPlan" && !queryPlan) {
                 fetchQueryPlan()
+            }
+            if (eventKey === "mlir") {
+                fetchMLIRSteps()
             }
         }
     };
@@ -156,19 +217,20 @@ function App() {
                 onMount={handleEditorDidMount}
                 onChange={handleQueryChange}
             />
-            <ButtonGroup>
-                <Button variant="primary" onClick={handleExecute}>
-                    <FontAwesomeIcon icon={faPlay}></FontAwesomeIcon> Execute Query
-                </Button>
-                <DropdownButton id="dropdown-basic-button" title={selectedDB.label} onSelect={handleSelectDB}>
-                    <Dropdown.Item eventKey="tpch-1">TPC-H (SF1)</Dropdown.Item>
-                    <Dropdown.Item eventKey="tpcds-1">TPC-DS (SF1)</Dropdown.Item>
-                    <Dropdown.Item eventKey="job">JOB</Dropdown.Item>
-                    <Dropdown.Item eventKey="uni">Uni</Dropdown.Item>
-                </DropdownButton>
-                <QuerySelection db={selectedDB.value} cb={(content) => setQuery(content)}></QuerySelection>
-            </ButtonGroup>
-
+            <div style={{textAlign: "center"}}>
+                <ButtonGroup>
+                    <Button variant="primary" onClick={handleExecute}>
+                        <FontAwesomeIcon icon={faPlay}></FontAwesomeIcon> Execute Query
+                    </Button>
+                    <DropdownButton id="dropdown-basic-button" title={selectedDB.label} onSelect={handleSelectDB}>
+                        <Dropdown.Item eventKey="tpch-1">TPC-H (SF1)</Dropdown.Item>
+                        <Dropdown.Item eventKey="tpcds-1">TPC-DS (SF1)</Dropdown.Item>
+                        <Dropdown.Item eventKey="job">JOB</Dropdown.Item>
+                        <Dropdown.Item eventKey="uni">Uni</Dropdown.Item>
+                    </DropdownButton>
+                    <QuerySelection db={selectedDB.value} cb={(content) => setQuery(content)}></QuerySelection>
+                </ButtonGroup>
+            </div>
             {queryResult &&
                 <Tabs activeKey={activeTab} onSelect={handleTabSelect}>
                     <Tab eventKey="result" title="Result">
@@ -187,8 +249,11 @@ function App() {
                         </div>
                     </Tab>
                     <Tab eventKey="mlir" title="MLIR">
-                        <h1>MLIR Tab</h1>
-                        <p>This is the content of the MLIR tab.</p>
+                        {mlirSteps &&
+                            <MLIRDisplay
+                                steps={mlirSteps}
+                            />
+                        }
                     </Tab>
                 </Tabs>
             }
