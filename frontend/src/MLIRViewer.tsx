@@ -12,10 +12,11 @@ export interface MLIRSteps {
 
 export interface MLIRViewerProps {
     steps: MLIRSteps|undefined;
-    loading:boolean
+    loading:boolean;
+    error: string|undefined;
 }
 
-export const MLIRViewer = ({steps,loading}: MLIRViewerProps) => {
+export const MLIRViewer = ({steps,loading,error}: MLIRViewerProps) => {
     const [activeTab, setActiveTab] = useState<string>('canonical');
     const handleTabSelect = (eventKey: string | null) => {
         if (eventKey) {
@@ -28,6 +29,15 @@ export const MLIRViewer = ({steps,loading}: MLIRViewerProps) => {
             <div style={{height: '50vh', overflow: 'auto', textAlign:"center"}}>
                 <Spinner animation="border" variant="primary"/>
             </div>)
+    } else if(error){
+        return (
+            <div style={{height: '50vh', overflow: 'auto', textAlign:"center"}}>
+                An Error occurred:
+                <pre>
+                    {error}
+                </pre>
+            </div>
+                )
     } else if(steps){
         return (
             <div style={{height: '50vh', overflow: 'auto'}}>

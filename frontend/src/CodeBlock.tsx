@@ -1,6 +1,6 @@
 import React from 'react';
 import hljs from 'highlight.js';
-import 'highlight.js/styles/atom-one-dark.css';
+import 'highlight.js/styles/atom-one-light.css';
 
 interface Props {
     code: string;
