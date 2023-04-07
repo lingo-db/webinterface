@@ -125,7 +125,7 @@ function App() {
     const fetchQueryPlan = async () => {
         try {
             setQueryPlanLoading(true)
-            const response = await fetch(`http://localhost:8000/${realCardinalities?'analyzed_query_plan':'query_plan'}?database=${selectedDB.value}&query=${encodeURIComponent(query)}`);
+            const response = await fetch(`/api/${realCardinalities?'analyzed_query_plan':'query_plan'}?database=${selectedDB.value}&query=${encodeURIComponent(query)}`);
             const json = await response.json()
             if (!response.ok) {
                 throw new Error(json.detail);
@@ -142,7 +142,7 @@ function App() {
     const fetchQueryResult = async () => {
         setQueryResultLoading(true)
         try {
-            const response = await fetch(`http://localhost:8000/execute?database=${selectedDB.value}&query=${encodeURIComponent(query)}`);
+            const response = await fetch(`/api/execute?database=${selectedDB.value}&query=${encodeURIComponent(query)}`);
             const json = await response.json()
             if (!response.ok) {
                 throw new Error(json.detail);
@@ -158,7 +158,7 @@ function App() {
     const fetchMLIRSteps = async () => {
         setMlirStepsLoading(true)
         try {
-            const response = await fetch(`http://localhost:8000/mlir_steps?database=${selectedDB.value}&query=${encodeURIComponent(query)}`);
+            const response = await fetch(`/api/mlir_steps?database=${selectedDB.value}&query=${encodeURIComponent(query)}`);
             const json = await response.json()
             if (!response.ok) {
                 throw new Error(json.detail);

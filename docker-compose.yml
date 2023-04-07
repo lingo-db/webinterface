@@ -1,0 +1,27 @@
+version: '3.2'
+
+services:
+    webinterface:
+        image: gitlab.db.in.tum.de:5005/lingo-db/webinterface
+        volumes:
+            - type: bind
+              source: './data'
+              target: '/data'
+        networks:
+            default:
+                ipv4_address: '172.20.21.1'
+        restart: 'unless-stopped'
+        ports:
+            - "8000:8000"
+
+
+networks:
+    default:
+        driver: bridge
+        driver_opts:
+            ip_range: '172.20.21.0/24'
+            'com.docker.network.bridge.enable_icc': 'false'
+        ipam:
+            driver: default
+            config:
+                - subnet: '172.20.21.0/24'

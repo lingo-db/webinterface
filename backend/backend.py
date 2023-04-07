@@ -2,21 +2,23 @@ import os
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
 import re
 import json
 import subprocess
 import tempfile
 import sys
 import resource
+import os
 
+
+DATA_ROOT = os.environ['DATA_ROOT'] #"/home/michael/projects/code/resources/data/"
+BINARY_DIR = os.environ['LINGODB_BINARY_DIR'] #"/home/michael/projects/code/build/lingodb-release/"
 app = FastAPI()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Replace with a list of allowed origins, or use ["*"] to allow all origins
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+api_app = FastAPI(title="api app")
+
 memory_limit = 10 * 1024 * 1024 * 1024
 resource.setrlimit(resource.RLIMIT_AS, (memory_limit, memory_limit))
 
@@ -45,7 +47,7 @@ def get_analyzed_query_plan(query_str, db):
         query_file = f.name
         f.flush()
         # Define the chained command as a string
-        command = "/home/michael/projects/code/build/lingodb-release/sql-to-mlir " + query_file + " /home/michael/projects/code/resources/data/" + db + "/metadata.json |  /home/michael/projects/code/build/lingodb-release/mlir-db-opt --use-db /home/michael/projects/code/resources/data/" + db + " --relalg-query-opt --relalg-track-tuples"
+        command = BINARY_DIR + "sql-to-mlir " + query_file + " "+ DATA_ROOT + db + "/metadata.json |  /home/michael/projects/code/build/lingodb-release/mlir-db-opt --use-db "+ DATA_ROOT + db + " --relalg-query-opt --relalg-track-tuples"
         print(command)
         # Create a temporary file to store the output
         with tempfile.NamedTemporaryFile(mode='w', delete=True) as tmpfile:
@@ -56,8 +58,8 @@ def get_analyzed_query_plan(query_str, db):
             if result.returncode == 0:
                 try:
                     # Build command string
-                    cmd = ["/home/michael/projects/code/build/lingodb-release/mlir-to-json", tmpfile.name,
-                           "/home/michael/projects/code/resources/data/" + db]
+                    cmd = [BINARY_DIR + "mlir-to-json", tmpfile.name,
+                           DATA_ROOT + db]
 
                     # Execute command and capture output
                     output = subprocess.check_output(cmd, universal_newlines=True, stderr=subprocess.STDOUT, timeout=20)
@@ -83,7 +85,7 @@ def get_query_plan(query_str, db):
         query_file = f.name
         f.flush()
         # Define the chained command as a string
-        command = "/home/michael/projects/code/build/lingodb-release/sql-to-mlir " + query_file + " /home/michael/projects/code/resources/data/" + db + "/metadata.json |  /home/michael/projects/code/build/lingodb-release/mlir-db-opt --use-db /home/michael/projects/code/resources/data/" + db + " --relalg-query-opt"
+        command = BINARY_DIR + "sql-to-mlir " + query_file + " "+DATA_ROOT + db + "/metadata.json |  "+BINARY_DIR+"/mlir-db-opt --use-db "+DATA_ROOT + db + " --relalg-query-opt"
         print(command)
         # Create a temporary file to store the output
         with tempfile.NamedTemporaryFile(mode='w', delete=True) as tmpfile:
@@ -94,7 +96,7 @@ def get_query_plan(query_str, db):
             if result.returncode == 0:
                 try:
                     # Build command string
-                    cmd = ["/home/michael/projects/code/build/lingodb-release/mlir-to-json", tmpfile.name]
+                    cmd = [BINARY_DIR + "mlir-to-json", tmpfile.name]
 
                     # Execute command and capture output
                     output = subprocess.check_output(cmd, universal_newlines=True, stderr=subprocess.STDOUT, timeout=5)
@@ -121,8 +123,8 @@ def run_sql_query(query_str, db):
     print(query_str)
     try:
         # Build command string
-        cmd = ["/home/michael/projects/code/build/lingodb-release/run-sql", query_file,
-               "/home/michael/projects/code/resources/data/" + db]
+        cmd = [BINARY_DIR + "run-sql", query_file,
+               DATA_ROOT + db]
 
         # Execute command and capture output
         output = subprocess.check_output(cmd, universal_newlines=True, stderr=subprocess.STDOUT, timeout=20)
@@ -162,12 +164,11 @@ def sql_to_mlir(query_str, db):
         f.flush()
         try:
             # Build command string
-            cmd = ["/home/michael/projects/code/build/lingodb-release/sql-to-mlir", query_file,
-                   "/home/michael/projects/code/resources/data/" + db + "/metadata.json"]
+            cmd = [BINARY_DIR + "sql-to-mlir", query_file,
+                   DATA_ROOT + db + "/metadata.json"]
             # Execute command and capture output
             output = subprocess.check_output(cmd, universal_newlines=True, timeout=5)
             print(cmd)
-            print(output)
             return output
 
         except subprocess.CalledProcessError as e:
@@ -186,16 +187,15 @@ def mlir_opt(mlir_str, db, opts):
         f.flush()
         try:
             # Build command string
-            cmd = ["/home/michael/projects/code/build/lingodb-release/mlir-db-opt"]
+            cmd = [BINARY_DIR + "mlir-db-opt"]
             if db:
                 cmd.append("--use-db")
-                cmd.append("/home/michael/projects/code/resources/data/" + db)
+                cmd.append(DATA_ROOT + db)
             cmd.extend(opts)
             cmd.append(mlir_file)
             # Execute command and capture output
             output = subprocess.check_output(cmd, universal_newlines=True, timeout=5)
             print(cmd)
-            print(output)
             return output
 
         except subprocess.CalledProcessError as e:
@@ -204,20 +204,20 @@ def mlir_opt(mlir_str, db, opts):
             raise HTTPException(status_code=400, detail="Failed to generate MLIR")
 
 
-@app.get("/query_plan")
+@api_app.get("/query_plan")
 async def query_plan(database: str, query: str):
     return get_query_plan(query, database)
-@app.get("/analyzed_query_plan")
+@api_app.get("/analyzed_query_plan")
 async def analyzed_query_plan(database: str, query: str):
     return get_analyzed_query_plan(query, database)
 
 
-@app.get("/execute")
+@api_app.get("/execute")
 async def execute(database: str, query: str):
     return run_sql_query(query, database)
 
 
-@app.get("/mlir_steps")
+@api_app.get("/mlir_steps")
 async def mlir_steps(database: str, query: str):
     canonical = sql_to_mlir(query, database)
     qopt = mlir_opt(canonical, database, ["--relalg-query-opt"])
@@ -232,3 +232,5 @@ async def mlir_steps(database: str, query: str):
         "imperative": imperative,
         "lowlevel": lowlevel,
     }
+app.mount("/api",api_app)
+app.mount("/", StaticFiles(directory="/webinterface/frontend",html=True), name="frontend")
