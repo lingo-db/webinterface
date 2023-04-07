@@ -47,7 +47,7 @@ def get_analyzed_query_plan(query_str, db):
         query_file = f.name
         f.flush()
         # Define the chained command as a string
-        command = BINARY_DIR + "sql-to-mlir " + query_file + " "+ DATA_ROOT + db + "/metadata.json |  /home/michael/projects/code/build/lingodb-release/mlir-db-opt --use-db "+ DATA_ROOT + db + " --relalg-query-opt --relalg-track-tuples"
+        command = BINARY_DIR + "sql-to-mlir " + query_file + " "+ DATA_ROOT + db + "/metadata.json | "+BINARY_DIR+"mlir-db-opt --use-db "+ DATA_ROOT + db + " --relalg-query-opt --relalg-track-tuples"
         print(command)
         # Create a temporary file to store the output
         with tempfile.NamedTemporaryFile(mode='w', delete=True) as tmpfile:
