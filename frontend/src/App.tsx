@@ -3,7 +3,7 @@ import React, {useRef, useState} from 'react';
 import './App.css';
 import {NormalizePlan, PlanGraphElement} from "./queryplan-viewer/NormalizePlan";
 import Editor from "@monaco-editor/react";
-import {Button, Table, Tabs, Tab, ButtonGroup, DropdownButton, Dropdown, Form, FormGroup,FormCheck} from 'react-bootstrap';
+import {Button, Table, Tabs, Tab, ButtonGroup, DropdownButton, Dropdown, Form, FormGroup,FormCheck,Alert} from 'react-bootstrap';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faPlay} from '@fortawesome/free-solid-svg-icons';
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -221,6 +221,12 @@ function App() {
     };
     return (
         <div className="App">
+            <h2>SQL WebInterface</h2>
+            <Alert variant="warning">
+                <b>Note!</b> This webinterface is for demo purposes only, and especially not suited for benchmarking.
+                It runs on a very old, low-end server (i7-3770 CPU, 32 GB), and LingoDB executes queries with additional verifications.
+                Furthermore, every request is processed by executing one of LingoDB's command line tools, which increases the observable latency.
+            </Alert>
             <Editor
                 height="40vh"
                 defaultLanguage="sql"
