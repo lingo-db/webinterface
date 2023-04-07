@@ -7,4 +7,4 @@ COPY backend/backend.py /webinterface/backend.py
 COPY frontend/build /webinterface/frontend
 RUN find /webinterface
 WORKDIR /webinterface
-ENTRYPOINT ["uvicorn", "backend:app","--host", "0.0.0.0"]
+ENTRYPOINT ["uvicorn", "backend:app","--host", "0.0.0.0","--port","80"]
