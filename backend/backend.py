@@ -1,6 +1,6 @@
 import os
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException,Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -18,6 +18,13 @@ DATA_ROOT = os.environ['DATA_ROOT'] #"/home/michael/projects/code/resources/data
 BINARY_DIR = os.environ['LINGODB_BINARY_DIR'] #"/home/michael/projects/code/build/lingodb-release/"
 app = FastAPI()
 api_app = FastAPI(title="api app")
+#api_app.add_middleware(
+#    CORSMiddleware,
+#    allow_origins=["*"],  # Replace with a list of allowed origins, or use ["*"] to allow all origins
+#    allow_credentials=True,
+#    allow_methods=["*"],
+#    allow_headers=["*"],
+#)
 
 memory_limit = 10 * 1024 * 1024 * 1024
 resource.setrlimit(resource.RLIMIT_AS, (memory_limit, memory_limit))
@@ -204,21 +211,21 @@ def mlir_opt(mlir_str, db, opts):
             raise HTTPException(status_code=400, detail="Failed to generate MLIR")
 
 
-@api_app.get("/query_plan")
-async def query_plan(database: str, query: str):
+@api_app.post("/query_plan")
+async def query_plan(database: str=Body(...), query: str=Body(...)):
     return get_query_plan(query, database)
-@api_app.get("/analyzed_query_plan")
+@api_app.post("/analyzed_query_plan")
 async def analyzed_query_plan(database: str, query: str):
     return get_analyzed_query_plan(query, database)
 
 
-@api_app.get("/execute")
-async def execute(database: str, query: str):
+@api_app.post("/execute")
+async def execute(database: str=Body(...), query: str=Body(...)):
     return run_sql_query(query, database)
 
 
-@api_app.get("/mlir_steps")
-async def mlir_steps(database: str, query: str):
+@api_app.post("/mlir_steps")
+async def mlir_steps(database: str=Body(...), query: str=Body(...)):
     canonical = sql_to_mlir(query, database)
     qopt = mlir_opt(canonical, database, ["--relalg-query-opt"])
     subop = mlir_opt(qopt, None, ["--lower-relalg-to-subop"])

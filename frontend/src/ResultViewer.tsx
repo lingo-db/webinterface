@@ -52,7 +52,7 @@ export const ResultViewer = ({result, loading, error}: ResultViewerProps) => {
                 <p style={{marginTop:10,textAlign:'center'}}><b>Execution:</b> {(timing.executionTime).toFixed(1)} ms &nbsp;&nbsp; <b>Optimization:</b> {(timing.QOpt).toFixed(1)} ms &nbsp;&nbsp;
                 <b>Compilation:</b> {(timing.lowerRelAlg + timing.lowerSubOp + timing.lowerDB + timing.lowerDSA + timing.lowerToLLVM + timing.toLLVMIR + timing.llvmOptimize + timing.llvmCodeGen).toFixed(1)} ms</p>
 
-                <Table striped bordered style={{tableLayout: 'fixed'}}>
+                <Table striped bordered>
                     <thead>
                     <tr>
                         {result.result.columns.map((column: string, index: number) => (

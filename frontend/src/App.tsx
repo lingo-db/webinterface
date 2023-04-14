@@ -122,10 +122,20 @@ function App() {
             console.log(query)
         }
     }
+    const host=""
     const fetchQueryPlan = async () => {
         try {
             setQueryPlanLoading(true)
-            const response = await fetch(`/api/${realCardinalities?'analyzed_query_plan':'query_plan'}?database=${selectedDB.value}&query=${encodeURIComponent(query)}`);
+            const response = await fetch(`${host}/api/${realCardinalities?'analyzed_query_plan':'query_plan'}`,{
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                database: selectedDB.value,
+                query: query
+                })
+            });
             const json = await response.json()
             if (!response.ok) {
                 throw new Error(json.detail);
@@ -142,7 +152,16 @@ function App() {
     const fetchQueryResult = async () => {
         setQueryResultLoading(true)
         try {
-            const response = await fetch(`/api/execute?database=${selectedDB.value}&query=${encodeURIComponent(query)}`);
+            const response = await fetch(`${host}/api/execute`,{
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                database: selectedDB.value,
+                query: query
+                })
+            });
             const json = await response.json()
             if (!response.ok) {
                 throw new Error(json.detail);
@@ -158,7 +177,16 @@ function App() {
     const fetchMLIRSteps = async () => {
         setMlirStepsLoading(true)
         try {
-            const response = await fetch(`/api/mlir_steps?database=${selectedDB.value}&query=${encodeURIComponent(query)}`);
+            const response = await fetch(`${host}/api/mlir_steps`,{
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                database: selectedDB.value,
+                query: query
+                })
+            });
             const json = await response.json()
             if (!response.ok) {
                 throw new Error(json.detail);
@@ -225,7 +253,7 @@ function App() {
             <Alert variant="warning">
                 <b>Note!</b> This webinterface is for demo purposes only, and especially not suited for benchmarking.
                 It runs on a very old, low-end server (i7-3770 CPU, 32 GB), and LingoDB executes queries with additional verifications.
-                Furthermore, every request is processed by executing one of LingoDB's command line tools, which increases the observable latency.
+                Furthermore, every request is processed by executing one of LingoDB's command line tools which first loads the entire data set into memory, increasing the observable latency significantly.
             </Alert>
             <Editor
                 height="40vh"
