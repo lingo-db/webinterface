@@ -59,7 +59,7 @@ def get_analyzed_query_plan(query_str, db):
         # Create a temporary file to store the output
         with tempfile.NamedTemporaryFile(mode='w', delete=True) as tmpfile:
             # Call the chained command using subprocess.run()
-            result = subprocess.run(command, shell=True, stdout=tmpfile, text=True, timeout=5)
+            result = subprocess.run(command, shell=True, stdout=tmpfile, text=True, timeout=5, env={"LINGODB_PARALLELISM":"4"})
 
             # Check that the command exited successfully
             if result.returncode == 0:
@@ -134,7 +134,7 @@ def run_sql_query(query_str, db):
                DATA_ROOT + db]
 
         # Execute command and capture output
-        output = subprocess.check_output(cmd, universal_newlines=True, stderr=subprocess.STDOUT, timeout=20)
+        output = subprocess.check_output(cmd, universal_newlines=True, stderr=subprocess.STDOUT, timeout=20, env={"LINGODB_PARALLELISM":"4"})
         # Parse output and skip first and last 4 lines
         splitted = output.split("\n")
         header_list = splitted[-2].split()
@@ -215,7 +215,7 @@ def mlir_opt(mlir_str, db, opts):
 async def query_plan(database: str=Body(...), query: str=Body(...)):
     return get_query_plan(query, database)
 @api_app.post("/analyzed_query_plan")
-async def analyzed_query_plan(database: str, query: str):
+async def analyzed_query_plan(database: str=Body(...), query: str=Body(...)):
     return get_analyzed_query_plan(query, database)
 
 

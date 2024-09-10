@@ -252,8 +252,8 @@ function App() {
             <h2>SQL WebInterface</h2>
             <Alert variant="warning">
                 <b>Note!</b> This webinterface is for demo purposes only, and especially not suited for benchmarking.
-                It runs on a very old, low-end server (i7-3770 CPU, 32 GB), and LingoDB executes queries with additional verifications.
-                Furthermore, every request is processed by executing one of LingoDB's command line tools which first loads the entire data set into memory, increasing the observable latency significantly.
+                It runs with 4 threads on a very old, low-end server (i7-3770 CPU, 32 GB), and LingoDB executes queries with additional verifications.
+                Furthermore, every request is processed by executing one of LingoDB's command line tools which first loads the data set into memory, increasing the observable latency significantly.
             </Alert>
             <Editor
                 height="40vh"
