@@ -122,7 +122,7 @@ function App() {
             console.log(query)
         }
     }
-    const host=""
+    const host="http://127.0.0.1:8000"
     const fetchQueryPlan = async () => {
         try {
             setQueryPlanLoading(true)

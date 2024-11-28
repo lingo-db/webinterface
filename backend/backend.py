@@ -18,13 +18,14 @@ DATA_ROOT = os.environ['DATA_ROOT'] #"/home/michael/projects/code/resources/data
 BINARY_DIR = os.environ['LINGODB_BINARY_DIR'] #"/home/michael/projects/code/build/lingodb-release/"
 app = FastAPI()
 api_app = FastAPI(title="api app")
-#api_app.add_middleware(
-#    CORSMiddleware,
-#    allow_origins=["*"],  # Replace with a list of allowed origins, or use ["*"] to allow all origins
-#    allow_credentials=True,
-#    allow_methods=["*"],
-#    allow_headers=["*"],
-#)
+if "WEBINTERFACE_LOCAL" in os.environ:
+    api_app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Replace with a list of allowed origins, or use ["*"] to allow all origins
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 memory_limit = 10 * 1024 * 1024 * 1024
 resource.setrlimit(resource.RLIMIT_AS, (memory_limit, memory_limit))
@@ -240,4 +241,5 @@ async def mlir_steps(database: str=Body(...), query: str=Body(...)):
         "lowlevel": lowlevel,
     }
 app.mount("/api",api_app)
-app.mount("/", StaticFiles(directory="/webinterface/frontend",html=True), name="frontend")
+if "WEBINTERFACE_LOCAL" not in os.environ:
+    app.mount("/", StaticFiles(directory="/webinterface/frontend",html=True), name="frontend")
