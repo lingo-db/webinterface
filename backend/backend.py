@@ -1,6 +1,7 @@
 import os
+from time import sleep
 
-from fastapi import FastAPI, HTTPException,Body
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -13,9 +14,8 @@ import sys
 import resource
 import os
 
-
-DATA_ROOT = os.environ['DATA_ROOT'] #"/home/michael/projects/code/resources/data/"
-BINARY_DIR = os.environ['LINGODB_BINARY_DIR'] #"/home/michael/projects/code/build/lingodb-release/"
+DATA_ROOT = os.environ['DATA_ROOT']  # "/home/michael/projects/code/resources/data/"
+BINARY_DIR = os.environ['LINGODB_BINARY_DIR']  # "/home/michael/projects/code/build/lingodb-release/"
 app = FastAPI()
 api_app = FastAPI(title="api app")
 if "WEBINTERFACE_LOCAL" in os.environ:
@@ -55,12 +55,13 @@ def get_analyzed_query_plan(query_str, db):
         query_file = f.name
         f.flush()
         # Define the chained command as a string
-        command = BINARY_DIR + "sql-to-mlir " + query_file + " "+ DATA_ROOT + db + "/metadata.json | "+BINARY_DIR+"mlir-db-opt --use-db "+ DATA_ROOT + db + " --relalg-query-opt --relalg-track-tuples"
+        command = BINARY_DIR + "sql-to-mlir " + query_file + " " + DATA_ROOT + db + " | " + BINARY_DIR + "mlir-db-opt --use-db " + DATA_ROOT + db + " --relalg-query-opt --relalg-track-tuples"
         print(command)
         # Create a temporary file to store the output
         with tempfile.NamedTemporaryFile(mode='w', delete=True) as tmpfile:
             # Call the chained command using subprocess.run()
-            result = subprocess.run(command, shell=True, stdout=tmpfile, text=True, timeout=5, env={"LINGODB_PARALLELISM":"4"})
+            result = subprocess.run(command, shell=True, stdout=tmpfile, text=True, timeout=5,
+                                    env={"LINGODB_PARALLELISM": "4"})
 
             # Check that the command exited successfully
             if result.returncode == 0:
@@ -83,6 +84,34 @@ def get_analyzed_query_plan(query_str, db):
                 # Print the error message
                 print(result.stderr.strip())
 
+def analyze(query_str, db):
+    if db not in ["tpch-1", "tpcds-1", "uni", "job"]:
+        raise RuntimeError("Unknown Database")
+    with tempfile.NamedTemporaryFile(mode="w", delete=True) as f:
+        f.write(query_str)
+        query_file = f.name
+        f.flush()
+        with tempfile.TemporaryDirectory() as snapshotdir:
+            print(BINARY_DIR+"run-sql "+query_file+" "+ DATA_ROOT + db)
+            output = subprocess.check_output([BINARY_DIR+"run-sql",query_file, DATA_ROOT + db], universal_newlines=True, stderr=subprocess.STDOUT, timeout=20,
+                                             env={"LINGODB_SNAPSHOT_DIR": snapshotdir, "LINGODB_SNAPSHOT_PASSES": "true", "LINGODB_SNAPSHOT_LEVEL":"important", "LINGODB_EXECUTION_MODE":"NONE"})
+            result = subprocess.run(f"{BINARY_DIR}mlir-db-opt --strip-debuginfo {snapshotdir}/important-snapshot-qopt.mlir > {snapshotdir}/important-snapshot-qopt.mlir.alt",
+                                             universal_newlines=True, stderr=subprocess.STDOUT, shell=True)
+            result = subprocess.run(f"{BINARY_DIR}mlir-db-opt --strip-debuginfo {snapshotdir}/important-snapshot-subop-opt.mlir > {snapshotdir}/important-snapshot-subop-opt.mlir.alt",
+                                             universal_newlines=True, stderr=subprocess.STDOUT, shell=True)
+            relalg_plan = subprocess.check_output([BINARY_DIR + "mlir-to-json", snapshotdir+"/important-snapshot-qopt.mlir.alt"],
+                                             universal_newlines=True, stderr=subprocess.STDOUT)
+            subop_plan = subprocess.check_output([BINARY_DIR + "mlir-subop-to-json", snapshotdir+"/important-snapshot-subop-opt.mlir.alt"],
+                                             universal_newlines=True)
+            analyzed_snapshots = subprocess.check_output([BINARY_DIR + "mlir-analyze-snapshots", snapshotdir+"/important-snapshot-info.json"],
+                                             universal_newlines=True)
+            print(os.listdir(snapshotdir))
+            return {"plan":json.loads(relalg_plan.split("\n")[0]), "subopplan":json.loads(subop_plan.split("\n")[0]), "mlir": json.loads(analyzed_snapshots)}
+
+
+
+    return {}
+
 
 def get_query_plan(query_str, db):
     if db not in ["tpch-1", "tpcds-1", "uni", "job"]:
@@ -93,10 +122,10 @@ def get_query_plan(query_str, db):
         query_file = f.name
         f.flush()
         # Define the chained command as a string
-        command = BINARY_DIR + "sql-to-mlir " + query_file + " "+DATA_ROOT + db + "/metadata.json |  "+BINARY_DIR+"/mlir-db-opt --use-db "+DATA_ROOT + db + " --relalg-query-opt"
+        command = BINARY_DIR + "sql-to-mlir " + query_file + " " + DATA_ROOT + db + " |  " + BINARY_DIR + "/mlir-db-opt --use-db " + DATA_ROOT + db + " --relalg-query-opt"
         print(command)
         # Create a temporary file to store the output
-        with tempfile.NamedTemporaryFile(mode='w', delete=True) as tmpfile:
+        with tempfile.TemporaryDirectory(mode='w', delete=True) as tmpfile:
             # Call the chained command using subprocess.run()
             result = subprocess.run(command, shell=True, stdout=tmpfile, text=True, timeout=5)
 
@@ -135,7 +164,8 @@ def run_sql_query(query_str, db):
                DATA_ROOT + db]
 
         # Execute command and capture output
-        output = subprocess.check_output(cmd, universal_newlines=True, stderr=subprocess.STDOUT, timeout=20, env={"LINGODB_PARALLELISM":"4"})
+        output = subprocess.check_output(cmd, universal_newlines=True, stderr=subprocess.STDOUT, timeout=20,
+                                         env={"LINGODB_PARALLELISM": "4"})
         # Parse output and skip first and last 4 lines
         splitted = output.split("\n")
         header_list = splitted[-2].split()
@@ -147,7 +177,13 @@ def run_sql_query(query_str, db):
                 times_dict[header_list[i]] = float(times_list[i])
         result = "\n".join(splitted[1:-4])
         table_as_json = table_to_json(raw_table=result)
-        return {"result": table_as_json, "timing": times_dict}
+        return {"result": table_as_json, "timing": {
+            "compilation": sum([times_dict[t] for t in
+                                ["lowerRelAlg", "lowerSubOp", "lowerDB", "lowerDSA", "lowerToLLVM", "toLLVMIR",
+                                 "llvmOptimize", "llvmCodeGen"]]),
+            "execution": times_dict["executionTime"],
+            "qopt": times_dict["QOpt"],
+        }}
 
     except subprocess.CalledProcessError as e:
         # Print error message to stderr
@@ -173,7 +209,7 @@ def sql_to_mlir(query_str, db):
         try:
             # Build command string
             cmd = [BINARY_DIR + "sql-to-mlir", query_file,
-                   DATA_ROOT + db + "/metadata.json"]
+                   DATA_ROOT + db]
             # Execute command and capture output
             output = subprocess.check_output(cmd, universal_newlines=True, timeout=5)
             print(cmd)
@@ -213,20 +249,22 @@ def mlir_opt(mlir_str, db, opts):
 
 
 @api_app.post("/query_plan")
-async def query_plan(database: str=Body(...), query: str=Body(...)):
-    return get_query_plan(query, database)
+async def query_plan(database: str = Body(...), query: str = Body(...)):
+    return analyze(query, database)
+
+
 @api_app.post("/analyzed_query_plan")
-async def analyzed_query_plan(database: str=Body(...), query: str=Body(...)):
+async def analyzed_query_plan(database: str = Body(...), query: str = Body(...)):
     return get_analyzed_query_plan(query, database)
 
 
 @api_app.post("/execute")
-async def execute(database: str=Body(...), query: str=Body(...)):
+async def execute(database: str = Body(...), query: str = Body(...)):
     return run_sql_query(query, database)
 
 
 @api_app.post("/mlir_steps")
-async def mlir_steps(database: str=Body(...), query: str=Body(...)):
+async def mlir_steps(database: str = Body(...), query: str = Body(...)):
     canonical = sql_to_mlir(query, database)
     qopt = mlir_opt(canonical, database, ["--relalg-query-opt"])
     subop = mlir_opt(qopt, None, ["--lower-relalg-to-subop"])
@@ -240,6 +278,8 @@ async def mlir_steps(database: str=Body(...), query: str=Body(...)):
         "imperative": imperative,
         "lowlevel": lowlevel,
     }
-app.mount("/api",api_app)
+
+
+app.mount("/api", api_app)
 if "WEBINTERFACE_LOCAL" not in os.environ:
-    app.mount("/", StaticFiles(directory="/webinterface/frontend",html=True), name="frontend")
+    app.mount("/", StaticFiles(directory="/webinterface/frontend", html=True), name="frontend")
