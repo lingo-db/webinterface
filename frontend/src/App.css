@@ -43,6 +43,10 @@
   position: relative;
 }
 
+Button.rounded {
+  border-radius: 6px 6px 6px 6px;
+}
+
 .spinner {
   position: absolute;
   top: 50%;

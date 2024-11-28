@@ -264,10 +264,12 @@ function App() {
             />
             <div style={{textAlign: "center"}}>
                 <ButtonGroup>
-                    <Button variant="primary" onClick={handleExecute}>
-                        <FontAwesomeIcon icon={faPlay}></FontAwesomeIcon> Execute Query
-                    </Button>
-                    <DropdownButton id="dropdown-basic-button" title={selectedDB.label} onSelect={handleSelectDB} >
+                    <div id="rounded">
+                        <Button variant="primary" onClick={handleExecute}>
+                            <FontAwesomeIcon icon={faPlay}></FontAwesomeIcon> Execute Query
+                        </Button>
+                    </div>
+                    <DropdownButton id="dropdown-basic-button" title={selectedDB.label} onSelect={handleSelectDB}>
                         <Dropdown.Item eventKey="tpch-1">TPC-H (SF1)</Dropdown.Item>
                         <Dropdown.Item eventKey="tpcds-1">TPC-DS (SF1)</Dropdown.Item>
                         <Dropdown.Item eventKey="job">JOB</Dropdown.Item>
