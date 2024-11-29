@@ -153,7 +153,7 @@ export const PlanViewer = memo(({
                 <div style={{
                     backgroundColor: "lightgray",
                     position: "relative",
-                }}>
+                }} onClick={(e)=>{e.stopPropagation()}}>
                     <svg style={{
                         backgroundColor: "lightgray",
                         userSelect: "none",

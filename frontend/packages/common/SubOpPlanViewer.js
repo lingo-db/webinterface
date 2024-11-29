@@ -56,7 +56,7 @@ const Expression = ({data}) => {
     }
 }
 
-const RenderedNode = ({data, x, y}) => {
+const RenderedNode = ({data, x, y, onOperatorSelect, selectedOps}) => {
     if (data.type==="col_arg"){
         return <div style={{
             transform: `translate(${x}px, ${y}px)`,
@@ -79,16 +79,16 @@ const RenderedNode = ({data, x, y}) => {
             transform: `translate(${x}px, ${y}px)`,
             position: "absolute",
             border: "1px solid black",
-            backgroundColor: "white",
+            backgroundColor:   selectedOps.includes(data.ref) ? "yellow":"white",
             borderRadius: 5,
             minWidth: 100,
-        }} id={`plan-${data.ref}`}>
-            <Operator data={data}/>
+        }} id={`plan-${data.ref}`} onClick={(e)=>{e.stopPropagation();console.log(e);onOperatorSelect(data.ref)}}>
+            <Operator data={data} onOperatorSelect={onOperatorSelect} selectedOps={selectedOps} />
         </div>
     }
 }
 
-const Operator = ({data}) => {
+const Operator = ({data, onOperatorSelect, selectedOps}) => {
 
     if (data.type === "execution_step") {
         let nodes = data.subops
@@ -165,7 +165,7 @@ const Operator = ({data}) => {
                     {inputs}
                 </div>
                 <PlanViewer nested={true} height={1000} width={700} nodes={nodes} edges={edges}
-                            renderNode={(node, x, y) => (<RenderedNode x={x} y={y} data={node}/>)}
+                            renderNode={(node, x, y) => (<RenderedNode x={x} y={y} data={node} onOperatorSelect={onOperatorSelect} selectedOps={selectedOps}/>)}
                             renderEdge={(edge) => {
                                 let points = edge.points.map((point) => `${point.x},${point.y}`).join(" ");
 
@@ -303,7 +303,7 @@ const Operator = ({data}) => {
                     flex: 1
                 }}>
                     <PlanViewer nested={true} height={1000} width={700} nodes={nodes} edges={edges}
-                                renderNode={(node, x, y) => (<RenderedNode x={x} y={y} data={node}/>)}
+                                renderNode={(node, x, y) => (<RenderedNode x={x} y={y} data={node} onOperatorSelect={onOperatorSelect} selectedOps={selectedOps}/>)}
                                 renderEdge={(edge) => {
                                     let points = edge.points.map((point) => `${point.x},${point.y}`).join(" ");
 
@@ -410,7 +410,7 @@ export const SubOpPlanViewer = ({height, width, input, onOperatorSelect, selecte
 
 
     return (nodes&&edges&&<PlanViewer nested={false} height={height} width={width} nodes={nodes} edges={edges}
-                        renderNode={(node, x, y) => (<RenderedNode x={x} y={y} data={node}/>)}
+                        renderNode={(node, x, y) => (<RenderedNode x={x} y={y} data={node} onOperatorSelect={onOperatorSelect} selectedOps={selectedOps}/>)}
                         renderEdge={(edge, nodesPos) => {
                             let edgePoints = edge.points.map((point) => {
                                 return {x: point.x, y: point.y}

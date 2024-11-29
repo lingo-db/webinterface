@@ -16,6 +16,7 @@ import os
 
 DATA_ROOT = os.environ['DATA_ROOT']  # "/home/michael/projects/code/resources/data/"
 BINARY_DIR = os.environ['LINGODB_BINARY_DIR']  # "/home/michael/projects/code/build/lingodb-release/"
+SCRIPT_DIR = os.environ['LINGODB_SCRIPT_DIR']  # "/home/michael/projects/code/build/lingodb-release/"
 app = FastAPI()
 api_app = FastAPI(title="api app")
 if "WEBINTERFACE_LOCAL" in os.environ:
@@ -95,10 +96,13 @@ def analyze(query_str, db):
             print(BINARY_DIR+"run-sql "+query_file+" "+ DATA_ROOT + db)
             output = subprocess.check_output([BINARY_DIR+"run-sql",query_file, DATA_ROOT + db], universal_newlines=True, stderr=subprocess.STDOUT, timeout=20,
                                              env={"LINGODB_SNAPSHOT_DIR": snapshotdir, "LINGODB_SNAPSHOT_PASSES": "true", "LINGODB_SNAPSHOT_LEVEL":"important", "LINGODB_EXECUTION_MODE":"NONE"})
-            result = subprocess.run(f"{BINARY_DIR}mlir-db-opt --strip-debuginfo {snapshotdir}/important-snapshot-qopt.mlir > {snapshotdir}/important-snapshot-qopt.mlir.alt",
+            result = subprocess.run(f"bash {SCRIPT_DIR}/clean-snapshot.sh {BINARY_DIR} {snapshotdir}/important-snapshot-qopt.mlir {snapshotdir}/important-snapshot-qopt.mlir.alt",
                                              universal_newlines=True, stderr=subprocess.STDOUT, shell=True)
-            result = subprocess.run(f"{BINARY_DIR}mlir-db-opt --strip-debuginfo {snapshotdir}/important-snapshot-subop-opt.mlir > {snapshotdir}/important-snapshot-subop-opt.mlir.alt",
+            print(result)
+            result = subprocess.run(f"bash {SCRIPT_DIR}/clean-snapshot.sh {BINARY_DIR} {snapshotdir}/important-snapshot-subop-opt.mlir  {snapshotdir}/important-snapshot-subop-opt.mlir.alt",
                                              universal_newlines=True, stderr=subprocess.STDOUT, shell=True)
+            print(os.listdir(snapshotdir))
+
             relalg_plan = subprocess.check_output([BINARY_DIR + "mlir-to-json", snapshotdir+"/important-snapshot-qopt.mlir.alt"],
                                              universal_newlines=True, stderr=subprocess.STDOUT)
             subop_plan = subprocess.check_output([BINARY_DIR + "mlir-subop-to-json", snapshotdir+"/important-snapshot-subop-opt.mlir.alt"],

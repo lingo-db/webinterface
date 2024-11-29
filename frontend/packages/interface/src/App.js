@@ -25,6 +25,12 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import {ResultTableViewer} from "./ResultTableViewer";
 import {SubOpPlanViewer} from "@lingodb/common/SubOpPlanViewer";
 import {MLIRViewer} from "@lingodb/common/MLIRViewer";
+import {
+    analyzeLayers,
+    getBaseReference,
+    goUp,
+    goDown
+} from "@lingodb/common/MLIRLayerAnalysis";
 
 
 export const RelationalPlanViewerWithLoading = ({input, loading, error, onOperatorSelect, selectedOps}) => {
@@ -43,12 +49,13 @@ export const RelationalPlanViewerWithLoading = ({input, loading, error, onOperat
             </div>
         )
     } else if (input) {
-        return (<RelationalPlanViewer input={input} height={window.innerHeight*0.5} width={window.innerWidth} selectedOps={selectedOps} onOperatorSelect={onOperatorSelect}/>)
+        return (<RelationalPlanViewer input={input} height={window.innerHeight * 0.5} width={window.innerWidth}
+                                      selectedOps={selectedOps} onOperatorSelect={onOperatorSelect}/>)
     } else {
         return null
     }
 }
-export const SubOpPlanViewerWithLoading = ({input, loading, error}) => {
+export const SubOpPlanViewerWithLoading = ({input, loading, error, selectedOps, onOperatorSelect}) => {
     if (loading) {
         return (
             <div style={{height: '50vh', overflow: 'auto', textAlign: "center"}}>
@@ -64,7 +71,9 @@ export const SubOpPlanViewerWithLoading = ({input, loading, error}) => {
             </div>
         )
     } else if (input) {
-        return (<SubOpPlanViewer input={input} height={window.innerHeight*0.5} width={window.innerWidth} selectedOps={[]} onOperatorSelect={()=>{}}/>)
+        return (
+            <SubOpPlanViewer input={input} height={window.innerHeight * 0.5} width={window.innerWidth} selectedOps={selectedOps}
+                             onOperatorSelect={onOperatorSelect}/>)
     } else {
         return null
     }
@@ -96,41 +105,42 @@ const queries = {
     }, {
         "query": "3",
         "content": "-- TPC-H Query 3\n\nselect\n        l_orderkey,\n        sum(l_extendedprice * (1 - l_discount)) as revenue,\n        o_orderdate,\n        o_shippriority\nfrom\n        customer,\n        orders,\n        lineitem\nwhere\n        c_mktsegment = 'BUILDING'\n        and c_custkey = o_custkey\n        and l_orderkey = o_orderkey\n        and o_orderdate < date '1995-03-15'\n        and l_shipdate > date '1995-03-15'\ngroup by\n        l_orderkey,\n        o_orderdate,\n        o_shippriority\norder by\n        revenue desc,\n        o_orderdate\nlimit 10\n"
-    }]}
-    const DropdownCheckbox = ({label, options, onChange}) => {
-        const [selectedOptions, setSelectedOptions] = useState([]);
+    }]
+}
+const DropdownCheckbox = ({label, options, onChange}) => {
+    const [selectedOptions, setSelectedOptions] = useState([]);
 
-        const handleOptionChange = (value) => {
-            let newSelected = []
-            if (selectedOptions.includes(value)) {
-                newSelected = selectedOptions.filter(option => option !== value)
-            } else {
-                newSelected = [...selectedOptions, value]
-            }
-            setSelectedOptions(newSelected);
-            onChange(newSelected)
-        };
-
-        return (
-            <DropdownButton title={label} variant="secondary">
-                <Form>
-                    <FormGroup>
-                        {options.map((option, index) => (
-                            <FormCheck
-                                key={index}
-                                type="checkbox"
-                                label={option.label}
-                                checked={selectedOptions.includes(option.value)}
-                                onChange={() => handleOptionChange(option.value)}
-                            />
-                        ))}
-                    </FormGroup>
-                </Form>
-            </DropdownButton>
-        );
+    const handleOptionChange = (value) => {
+        let newSelected = []
+        if (selectedOptions.includes(value)) {
+            newSelected = selectedOptions.filter(option => option !== value)
+        } else {
+            newSelected = [...selectedOptions, value]
+        }
+        setSelectedOptions(newSelected);
+        onChange(newSelected)
     };
-    function App()
-{
+
+    return (
+        <DropdownButton title={label} variant="secondary">
+            <Form>
+                <FormGroup>
+                    {options.map((option, index) => (
+                        <FormCheck
+                            key={index}
+                            type="checkbox"
+                            label={option.label}
+                            checked={selectedOptions.includes(option.value)}
+                            onChange={() => handleOptionChange(option.value)}
+                        />
+                    ))}
+                </FormGroup>
+            </Form>
+        </DropdownButton>
+    );
+};
+
+function App() {
     const editorRef = useRef(null);
     const [query, setQuery] = useState(queries["tpch-1"][0].content)
     const [queryResult, setQueryResult] = useState(undefined)
@@ -142,14 +152,15 @@ const queries = {
     const [queryPlanLoading, setQueryPlanLoading] = useState(false);
     const [queryPlanError, setQueryPlanError] = useState(undefined)
 
-    const [mlirSteps, setMlirSteps] = useState(undefined)
-    const [mlirStepsLoading, setMlirStepsLoading] = useState(false)
-    const [mlirStepsError, setMlirStepsError] = useState(undefined)
-
+    const [layers, setLayers] = useState(undefined)
+    const [layerInfo, setLayerInfo] = useState(undefined)
     const [showResults, setShowResults] = useState(false)
     const [realCardinalities, setRealCardinalities] = useState(false)
 
-    const [selectedOps, setSelectedOps] = useState([])
+    const [selectedRelAlgOps, setSelectedRelAlgOps] = useState([])
+    const [selectedSubOpOps, setSelectedSubOpOps] = useState([])
+    const [selectedImpOps1, setSelectedImpOps1] = useState([])
+    const [selectedImpOps2, setSelectedImpOps2] = useState([])
 
     const [selectedDB, setSelectedDB] = useState({
         label: 'TPC-H (SF1)',
@@ -189,6 +200,13 @@ const queries = {
             setQueryPlan(json.plan);
             console.log(json.subopplan)
             setSubOpPlan(json.subopplan)
+            console.log(json.mlir)
+            setLayers(json.mlir)
+            const relalgBaseRef=getBaseReference(json.mlir[1].passInfo.file)
+            const analyzed= analyzeLayers(json.mlir)
+            console.log("layerInfo", analyzed)
+            setLayerInfo(analyzed)
+
         } catch (error) {
             console.log(error.message)
             setQueryPlanError(error.message)
@@ -222,41 +240,14 @@ const queries = {
             setQueryResultLoading(false)
         }
     }
-    const fetchMLIRSteps = async () => {
-        setMlirStepsLoading(true)
-        try {
-            const response = await fetch(`${host}/api/mlir_steps`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    database: selectedDB.value,
-                    query: query
-                })
-            });
-            const json = await response.json()
-            if (!response.ok) {
-                throw new Error(json.detail);
-            }
-            setMlirSteps(json);
-        } catch (error) {
-            console.log(error.message)
-            setMlirStepsError(error.message)
-        } finally {
-            setMlirStepsLoading(false)
-        }
 
-    }
     const handleExecute = () => {
         setQueryPlanError(undefined)
         setQueryResultError(undefined)
-        setMlirStepsError(undefined)
         setShowResults(true)
         setActiveTab('result')
         setQueryPlan(undefined)
         setSubOpPlan(undefined)
-        setMlirSteps(undefined)
         fetchQueryResult()
     };
 
@@ -294,6 +285,32 @@ const queries = {
             setSelectedDB({label: 'TPC-H (SF1)', value: 'tpch-1'});
         }
     };
+
+    const handleRelAlgOpSelection=(op)=>{
+        setSelectedRelAlgOps([op])
+        const subOpBaseRef=getBaseReference(layers[3].passInfo.file)
+        const imp1BaseRef=getBaseReference(layers[4].passInfo.file)
+        const imp2BaseRef=getBaseReference(layers[5].passInfo.file)
+        const relatedSubOps=goDown(op, subOpBaseRef, layerInfo)
+        const relatedImpOps1=goDown(op, imp1BaseRef, layerInfo)
+        const relatedImpOps2=goDown(op, imp2BaseRef, layerInfo)
+        setSelectedSubOpOps(relatedSubOps)
+        setSelectedImpOps1(relatedImpOps1)
+        setSelectedImpOps2(relatedImpOps2)
+        console.log("selecting SubOps:", relatedSubOps)
+    }
+    const handleSubOpOpSelection=(op)=>{
+        setSelectedSubOpOps([op])
+        const relalgBaseRef=getBaseReference(layers[1].passInfo.file)
+        const imp1BaseRef=getBaseReference(layers[4].passInfo.file)
+        const imp2BaseRef=getBaseReference(layers[5].passInfo.file)
+        const relatedRelalgOps=goUp(op, relalgBaseRef, layerInfo)
+        const relatedImpOps1=goDown(op, imp1BaseRef, layerInfo)
+        const relatedImpOps2=goDown(op, imp2BaseRef, layerInfo)
+        setSelectedRelAlgOps(relatedRelalgOps)
+        setSelectedImpOps1(relatedImpOps1)
+        setSelectedImpOps2(relatedImpOps2)
+    }
     return (
         <div className="App">
             <h2>SQL WebInterface</h2>
@@ -339,8 +356,10 @@ const queries = {
                         </Tab>
                         <Tab eventKey="subopPlan" title="SubOperators">
                         </Tab>
-                        <Tab eventKey="mlir" title="MLIR">
-                        </Tab>
+                        <Tab eventKey="mlir" title="MLIR (RelAlg)"/>
+                        <Tab eventKey="mlir2" title="MLIR (SubOp)"/>
+                        <Tab eventKey="mlir3" title="MLIR (HL. Imperative)"/>
+                        <Tab eventKey="mlir4" title="MLIR (LL. Imperative)"/>
                     </Tabs>
 
                     <div eventKey="result" title="Result"
@@ -352,21 +371,60 @@ const queries = {
                         <div style={{height: '50vh'}}>
                             <RelationalPlanViewerWithLoading input={queryPlan} loading={queryPlanLoading}
                                                              error={queryPlanError}
-                                                             onOperatorSelect={(id) => setSelectedOps([id])}
-                                                             selectedOps={selectedOps}/>
+                                                             onOperatorSelect={handleRelAlgOpSelection}
+                                                             selectedOps={selectedRelAlgOps}/>
                         </div>
                     </div>
                     <div eventKey="subopPlan" title="SubOperatorPlan"
                          style={{visibility: activeTab === "subopPlan" ? "visible" : "hidden", position: 'absolute'}}>
                         <div style={{height: '50vh', backgroundColor: "gray"}}>
                             <SubOpPlanViewerWithLoading input={subOpPlan} loading={queryPlanLoading}
-                                                        error={queryPlanError}/>
+                                                        error={queryPlanError} selectedOps={selectedSubOpOps}
+                                                        onOperatorSelect={handleSubOpOpSelection}/>
                         </div>
                     </div>
                     <div eventKey="mlir" title="MLIR"
-                         style={{visibility: activeTab === "mlir" ? "visible" : "hidden", position: 'absolute'}}>
+                         style={{
+                             visibility: activeTab === "mlir" ? "visible" : "hidden",
+                             position: 'absolute',
+                             textAlign: "left"
+                         }}>
                         <div style={{height: '50vh'}}>
-                            MLIR (todo)
+                            {layers && <MLIRViewer height={window.innerHeight * 0.5} width={window.innerWidth}
+                                                   selectedOps={selectedRelAlgOps} layer={layers[1]}/>}
+                        </div>
+                    </div>
+                    <div title="MLIR"
+                         style={{
+                             visibility: activeTab === "mlir2" ? "visible" : "hidden",
+                             position: 'absolute',
+                             textAlign: "left"
+                         }}>
+                        <div style={{height: '50vh'}}>
+                            {layers && <MLIRViewer height={window.innerHeight * 0.5} width={window.innerWidth}
+                                                   selectedOps={selectedSubOpOps} layer={layers[3]}/>}
+                        </div>
+                    </div>
+                    <div title="MLIR"
+                         style={{
+                             visibility: activeTab === "mlir3" ? "visible" : "hidden",
+                             position: 'absolute',
+                             textAlign: "left"
+                         }}>
+                        <div style={{height: '50vh'}}>
+                            {layers && <MLIRViewer height={window.innerHeight * 0.5} width={window.innerWidth}
+                                                   selectedOps={selectedImpOps1} layer={layers[4]}/>}
+                        </div>
+                    </div>
+                    <div title="MLIR"
+                         style={{
+                             visibility: activeTab === "mlir4" ? "visible" : "hidden",
+                             position: 'absolute',
+                             textAlign: "left"
+                         }}>
+                        <div style={{height: '50vh'}}>
+                            {layers && <MLIRViewer height={window.innerHeight * 0.5} width={window.innerWidth}
+                                                   selectedOps={selectedImpOps2} layer={layers[5]}/>}
                         </div>
                     </div>
                 </div>
