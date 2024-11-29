@@ -255,6 +255,7 @@ const queries = {
         setShowResults(true)
         setActiveTab('result')
         setQueryPlan(undefined)
+        setSubOpPlan(undefined)
         setMlirSteps(undefined)
         fetchQueryResult()
     };
@@ -348,7 +349,7 @@ const queries = {
                     </div>
                     <div eventKey="queryPlan" title="QueryPlan"
                          style={{visibility: activeTab === "queryPlan" ? "visible" : "hidden", position: 'absolute'}}>
-                        <div style={{height: '50vh', backgroundColor: "gray"}}>
+                        <div style={{height: '50vh'}}>
                             <RelationalPlanViewerWithLoading input={queryPlan} loading={queryPlanLoading}
                                                              error={queryPlanError}
                                                              onOperatorSelect={(id) => setSelectedOps([id])}
@@ -364,7 +365,7 @@ const queries = {
                     </div>
                     <div eventKey="mlir" title="MLIR"
                          style={{visibility: activeTab === "mlir" ? "visible" : "hidden", position: 'absolute'}}>
-                        <div style={{height: '50vh', backgroundColor: "gray"}}>
+                        <div style={{height: '50vh'}}>
                             MLIR (todo)
                         </div>
                     </div>

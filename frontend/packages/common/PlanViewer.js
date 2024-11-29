@@ -1,11 +1,21 @@
 import dagre from "@dagrejs/dagre";
-import React, {memo, useEffect, useLayoutEffect, useState} from "react";
+import React, {memo, useEffect, useLayoutEffect, useRef, useState} from "react";
 
-export const PlanViewer = memo(({nested, height, width, nodes, edges, renderNode, renderEdge, onRendered, drawExtra}) => {
+export const PlanViewer = memo(({
+                                    nested,
+                                    height,
+                                    width,
+                                    nodes,
+                                    edges,
+                                    renderNode,
+                                    renderEdge,
+                                    onRendered,
+                                    drawExtra
+                                }) => {
 
     //dagre.layout(g);
     const [internalEdges, setInternalEdges] = useState([])
-
+    const isMounted = useRef(false);
 
     const stageWidth = width;
     const stageHeight = height;
@@ -45,7 +55,12 @@ export const PlanViewer = memo(({nested, height, width, nodes, edges, renderNode
     const [nodesPos, setNodesPos] = useState(undefined)
 
     const render = (nodes, edges) => {
-        const g = new dagre.graphlib.Graph().setGraph({nodesep: 30, ranksep: 20,marginy:nested? 20:0, marginx:nested?10:0});
+        const g = new dagre.graphlib.Graph().setGraph({
+            nodesep: 30,
+            ranksep: 20,
+            marginy: nested ? 20 : 0,
+            marginx: nested ? 10 : 0
+        });
         nodes.forEach((node) => {
             const element = document.getElementById(`plan-${node.ref}`)
             const nodeWidth = element.offsetWidth
@@ -57,10 +72,10 @@ export const PlanViewer = memo(({nested, height, width, nodes, edges, renderNode
         })
         dagre.layout(g);
         let newNodesLayout = {}
-        let newNodesPos={}
+        let newNodesPos = {}
         g.nodes().forEach((nodeId) => {
             let node = g.node(nodeId);
-            if (node ===undefined){
+            if (node === undefined) {
                 console.log("unknown node", nodeId, JSON.stringify(nodeId))
             }
             newNodesLayout[nodeId] = {
@@ -69,7 +84,7 @@ export const PlanViewer = memo(({nested, height, width, nodes, edges, renderNode
                 width: node.width,
                 height: node.height
             }
-            newNodesPos[nodeId] ={
+            newNodesPos[nodeId] = {
                 computedX: node.x,
                 computedY: node.y,
                 renderX: node.x - node.width / 2,
@@ -100,12 +115,12 @@ export const PlanViewer = memo(({nested, height, width, nodes, edges, renderNode
         setInternalEdges(newEdges)
         const requiredWidth = g.nodes().reduce((maxWidth, nodeId) => {
             let node = g.node(nodeId);
-            return Math.max(maxWidth, node.x + node.width/2);
-        }, 0)+ (nested?10:0);
+            return Math.max(maxWidth, node.x + node.width / 2);
+        }, 0) + (nested ? 10 : 0);
         const requiredHeight = g.nodes().reduce((maxHeight, nodeId) => {
             let node = g.node(nodeId);
-            return Math.max(maxHeight, node.y + node.height/2);
-        }, 0)+(nested? 20:0);
+            return Math.max(maxHeight, node.y + node.height / 2);
+        }, 0) + (nested ? 20 : 0);
         setRequiredWidth(requiredWidth)
         setRequiredHeight(requiredHeight)
         const newScale = Math.min(stageWidth / requiredWidth, stageHeight / requiredHeight)
@@ -116,9 +131,19 @@ export const PlanViewer = memo(({nested, height, width, nodes, edges, renderNode
 
     }
     useEffect(() => {
+        isMounted.current=true
         render(nodes, edges)
-        setTimeout(()=>render(nodes,edges),500)
-        setTimeout(()=>render(nodes,edges),1000)
+        let timer1 = setTimeout(() => {
+            if (isMounted.current) render(nodes, edges)
+        }, 500)
+        let timer2 = setTimeout(() => {
+            if (isMounted.current) render(nodes, edges)
+        }, 1000)
+        return () => {
+            isMounted.current = false
+            clearTimeout(timer1)
+            clearTimeout(timer2)
+        }
     }, [nodes, edges])
 
 
@@ -127,7 +152,7 @@ export const PlanViewer = memo(({nested, height, width, nodes, edges, renderNode
             <div>
                 <div style={{
                     backgroundColor: "lightgray",
-                    position:"relative",
+                    position: "relative",
                 }}>
                     <svg style={{
                         backgroundColor: "lightgray",
@@ -138,7 +163,7 @@ export const PlanViewer = memo(({nested, height, width, nodes, edges, renderNode
                         <g>
                             {
 
-                                internalEdges.map((e)=>renderEdge(e,nodesPos))
+                                internalEdges.map((e) => renderEdge(e, nodesPos))
                             }
                             {drawExtra && drawExtra(nodesPos, requiredHeight)}
 
@@ -152,7 +177,7 @@ export const PlanViewer = memo(({nested, height, width, nodes, edges, renderNode
                         position: "absolute"
                     }}>
                         {nodes.map((node) => {
-                            return renderNode(node, node.ref in nodesLayout ? nodesLayout[node.ref].x : 0, node.ref in nodesLayout ? nodesLayout[node.ref].y : 0, ()=>render(nodes, edges))
+                            return renderNode(node, node.ref in nodesLayout ? nodesLayout[node.ref].x : 0, node.ref in nodesLayout ? nodesLayout[node.ref].y : 0, () => render(nodes, edges))
                         })}
 
                     </div>
@@ -180,16 +205,16 @@ export const PlanViewer = memo(({nested, height, width, nodes, edges, renderNode
                         height: requiredHeight,
                         backgroundColor: "lightgray",
                         userSelect: "none",
-                        top:0,
-                        left:0,
-                        position:"absolute"
+                        top: 0,
+                        left: 0,
+                        position: "absolute"
                     }}>
                         <g>
                             {
 
-                                internalEdges.map((e)=>renderEdge(e,nodesPos))
+                                internalEdges.map((e) => renderEdge(e, nodesPos))
                             }
-                            {drawExtra && drawExtra(nodesPos,requiredHeight)}
+                            {drawExtra && drawExtra(nodesPos, requiredHeight)}
                         </g>
                     </svg>
                     <div style={{
