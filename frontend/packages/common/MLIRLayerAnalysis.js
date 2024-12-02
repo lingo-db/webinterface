@@ -1,12 +1,10 @@
 const enumEdges = (data, edgesDown, edgesUp) => {
-    console.log("enumEdges",data)
     if (Array.isArray(data)) {
         data.forEach((child) => {
             enumEdges(child, edgesDown, edgesUp)
         })
     } else if (data.type === "op") {
         if (data.mappedId) {
-            console.log("setting", data.id, data.mappedId)
             edgesUp[data.id] = data.mappedId
             if (!edgesDown[data.mappedId]){
                 edgesDown[data.mappedId] = []
