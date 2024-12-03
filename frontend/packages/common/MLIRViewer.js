@@ -81,14 +81,20 @@ const renderType = ({data, selectionState, onOpClick}) => {
 }
 
 const renderBlock = ({data, selectionState, onOpClick}) => {
+    let children=data.children
+    if (data.eCB){
+        children=children.slice(1,-1)
+    }else{
+        children=children.slice(1)
+    }
     return (<div style={{display: "inline"}}>
-        {"{"}
+        {data.sCB?"{":<Render data={data.children[0]} selectionState={selectionState} onOpClick={onOpClick}/>}
         <div style={{paddingLeft: "10px"}}>
-            {data.children.slice(1, -1).map((child, index) => {
+            {children.map((child, index) => {
                 return (<Render data={child} selectionState={selectionState} onOpClick={onOpClick}></Render>)
             })}
         </div>
-        {"}"}
+        {data.eCB?"}":""}
     </div>)
 }
 

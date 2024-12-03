@@ -208,9 +208,6 @@ const App = () => {
                     <Col className="p-3" style={{backgroundColor: '#f8f9fa'}}>
                         {hasLayers && <div><Tabs activeKey={activeRightTab} onSelect={handleRightTabSelect}>
                             <Tab eventKey="mlir_relalg" title="RelAlg">
-                                <MLIRViewer height={2 * (window.innerHeight - 90) / 3}
-                                            width={(window.innerWidth - 100) / 2}
-                                            layer={relalgMLIRData} selectedOps={selectedOps}></MLIRViewer>
                             </Tab>
                             <Tab eventKey="mlir_subop" title="SubOp">
 
