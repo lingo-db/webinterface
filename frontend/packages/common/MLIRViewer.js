@@ -99,7 +99,7 @@ const renderBlock = ({data, selectionState, onOpClick}) => {
 }
 
 
-export const MLIRViewer = ({layer, selectedOps, width, height}) => {
+export const MLIRViewer = ({layer, selectedOps, width, height, onOpClick}) => {
     const scrollableDivRef = useRef(null);
     const getBackground = (data) => {
         if (data.type === "op" && selectedOps.includes(data.id)) {
@@ -114,6 +114,6 @@ export const MLIRViewer = ({layer, selectedOps, width, height}) => {
         }
     }, [selectedOps]);
     return (<div ref={scrollableDivRef} style={{maxWidth: width, maxHeight: height, overflow: "auto"}}>
-        <Render data={layer.parsed} selectionState={getBackground} onOpClick={()=>{}}/>
+        <Render data={layer.parsed} selectionState={getBackground} onOpClick={onOpClick}/>
     </div>)
 }

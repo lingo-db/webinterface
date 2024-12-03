@@ -79,8 +79,6 @@ export const goUp = (opId, relalgBaseRef, info) => {
 export const goDown = (opId, subOpBaseRef, info) => {
     let collectedChildren = []
     collectChildren(info.indexedOps[opId], collectedChildren)
-    console.log(collectedChildren)
-    console.log(info)
     let res = []
     const descend = (curr)=>{
         let op = info.indexedOps[curr]
@@ -106,12 +104,10 @@ export const analyzeLayers = (layers) => {
     let tmpEdgesUp = new Map
     const newIndexOps = {}
     layers.forEach((pass) => {
-        console.log(pass.parsed)
         enumEdges(pass.parsed, tmpEdgesDown, tmpEdgesUp)
         indexOps(pass.parsed, newIndexOps)
     })
 
-    console.log(tmpEdgesUp)
     return {edgesUp: tmpEdgesUp, edgesDown: tmpEdgesDown, indexedOps: newIndexOps};
 
 }

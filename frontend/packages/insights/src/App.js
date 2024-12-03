@@ -5,34 +5,47 @@ import {Button, Col, Container, Form, Navbar, Row, Tab, Tabs} from 'react-bootst
 import {MLIRViewer} from "@lingodb/common/MLIRViewer";
 import {RelationalPlanViewer} from "@lingodb/common/RelationalPlanViewer";
 import {TraceViewer} from "@lingodb/common/TraceViewer";
-import {analyzeLayers, getBaseReference, goUp} from "@lingodb/common/MLIRLayerAnalysis";
+import {analyzeLayers, getBaseReference, goDown, goUp} from "@lingodb/common/MLIRLayerAnalysis";
 import {SubOpPlanViewer} from "@lingodb/common/SubOpPlanViewer";
 import {PerfSymbolTable} from "./PerfSymbolTable";
 import {PerfAsmViewer} from "./PerfAsmViewer";
 
 const App = () => {
     const [data, setData] = useState(null);
-    const [relalgMLIRData, setRelalgMLIRData] = useState(null);
-    const [subopMLIRData, setSubOpMLIRData] = useState(null);
-    const [llvmMLIRData, setLlvmMLIRData] = useState(null);
-    const [imperativeMLIRData, setImperativeMLIRData] = useState(null);
+
+    //which data parts are available
     const [hasTrace, setHasTrace] = useState(false);
     const [hasPlan, setHasPlan] = useState(false);
     const [hasSubOpPlan, setHasSubOpPlan] = useState(false);
     const [hasPerf, setHasPerf] = useState(false);
-
-    const [perfSymbols, setPerfSymbols] = useState(null);
     const [hasLayers, setHasLayers] = useState(false);
+
+    //mlir modules on different layers
+    const [relalgMLIRData, setRelalgMLIRData] = useState(null);
+    const [subopMLIRData, setSubOpMLIRData] = useState(null);
+    const [imperativeMLIRData, setImperativeMLIRData] = useState(null);
+    const [llvmMLIRData, setLlvmMLIRData] = useState(null);
+
+    //aggregated perf data (file,symbol) -> percentage
+    const [perfSymbols, setPerfSymbols] = useState(null);
+
+    //cached "graph", to find origin of ops or dependent ops
     const [layerInfo, setLayerInfo] = useState(undefined)
-    const [selectedOps, setSelectedOps] = useState([]);
+
+
+    //selected ops accross different layers
+    const [selectedRelAlgOps, setSelectedRelAlgOps] = useState([]);
+    const [selectedSubOpOps, setSelectedSubOpOps] = useState([]);
+    const [selectedImperativeOps, setSelectedImperativeOps] = useState([]);
     const [selectedLLVMOps, setSelectedLLVMOps] = useState([]);
+
+
     const handleFileUpload = (event) => {
         const file = event.target.files[0];
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
                 const json = JSON.parse(e.target.result);
-                console.log(json)
                 setData(json);
             } catch (error) {
                 alert('Failed to parse JSON file.');
@@ -42,7 +55,6 @@ const App = () => {
     };
 
 
-    const [relalgBaseRef, setRelalgBaseRef] = useState(null);
     useEffect(() => {
             if (data == null) {
                 setRelalgMLIRData(null)
@@ -76,8 +88,6 @@ const App = () => {
                     setSubOpMLIRData(subopModule)
                     let newLayerInfo = analyzeLayers(data.layers)
                     setLayerInfo(newLayerInfo)
-                    const newRelAlgBaseRef = getBaseReference(relalgModule.passInfo.file)
-                    setRelalgBaseRef(newRelAlgBaseRef)
                     if (data.perf) {
 
                         setHasPerf(true)
@@ -96,20 +106,55 @@ const App = () => {
         ,
         [data]
     )
-
+    const handleSubOpSelection=(op)=>{
+        setSelectedSubOpOps([op])
+        const relalgBaseRef=getBaseReference(relalgMLIRData.passInfo.file)
+        const impBaseRef=getBaseReference(imperativeMLIRData.passInfo.file)
+        const llvmBaseRef=getBaseReference(llvmMLIRData.passInfo.file)
+        const relatedRelalgOps=goUp(op, relalgBaseRef, layerInfo)
+        const relatedImpOps=goDown(op, impBaseRef, layerInfo)
+        const relatedLLVMOps=goDown(op, llvmBaseRef, layerInfo)
+        setSelectedRelAlgOps(relatedRelalgOps)
+        setSelectedImperativeOps(relatedImpOps)
+        setSelectedLLVMOps(relatedLLVMOps)
+    }
+    const handleRelAlgOpSelection=(op)=>{
+        setSelectedRelAlgOps([op])
+        const subOpBaseRef=getBaseReference(subopMLIRData.passInfo.file)
+        const impBaseRef=getBaseReference(imperativeMLIRData.passInfo.file)
+        const llvmBaseRef=getBaseReference(llvmMLIRData.passInfo.file)
+        const relatedSubOps=goDown(op, subOpBaseRef, layerInfo)
+        const relatedImpOps=goDown(op, impBaseRef, layerInfo)
+        const relatedLLVMOps=goDown(op, llvmBaseRef, layerInfo)
+        setSelectedSubOpOps(relatedSubOps)
+        setSelectedImperativeOps(relatedImpOps)
+        setSelectedLLVMOps(relatedLLVMOps)
+    }
+    const handleLLVMOpSelection=(op)=>{
+        setSelectedLLVMOps([op])
+        const relalgBaseRef=getBaseReference(relalgMLIRData.passInfo.file)
+        const subOpBaseRef=getBaseReference(subopMLIRData.passInfo.file)
+        const impBaseRef=getBaseReference(imperativeMLIRData.passInfo.file)
+        const relatedRelalgOps=goUp(op, relalgBaseRef, layerInfo)
+        const relatedSubOpOpss=goUp(op, subOpBaseRef, layerInfo)
+        const relatedImpOps=goUp(op, impBaseRef, layerInfo)
+        setSelectedRelAlgOps(relatedRelalgOps)
+        setSelectedImperativeOps(relatedImpOps)
+        setSelectedSubOpOps(relatedSubOpOpss)
+    }
     const handleTraceSelect = (trace) => {
         if (trace.category === "Execution" && trace.name === "Step" && hasLayers) {
-            console.log(trace.extra.location)
-            setSelectedOps(goUp(trace.extra.location, relalgBaseRef, layerInfo))
+            handleSubOpSelection(trace.extra.location)
         }
     }
 
     const handleUnloadData = () => {
         setData(null);
-        setSelectedOps([])
+        setSelectedRelAlgOps([])
+        setSelectedSubOpOps([])
+        setSelectedImperativeOps([])
         setRelalgMLIRData(null)
         setLayerInfo(null)
-        setRelalgBaseRef(null)
         setHasTrace(false)
         setHasPlan(false)
         setHasSubOpPlan(false)
@@ -128,7 +173,9 @@ const App = () => {
     const handleInstrClick = (instr) => {
         if (instr.loc) {
             console.log("selected llvm", [instr.loc])
-            setSelectedLLVMOps([instr.loc])
+            const op=instr.loc
+            handleLLVMOpSelection(op)
+
         }
         setActiveRightTab("mlir_llvm")
     }
@@ -166,13 +213,13 @@ const App = () => {
                 <Row>
                     <Col className="p-3" style={{backgroundColor: '#f8f9fa'}}>
                         <Tabs activeKey={activeLeftTab} onSelect={handleLeftTabSelect}>
-                            <Tab eventKey="queryPlan" title="Query-Plan">
+                            {hasPlan&&<Tab eventKey="queryPlan" title="Query-Plan">
 
-                            </Tab>
-                            <Tab eventKey="subopPlan" title="SubOp-Visualization">
-                            </Tab>
-                            <Tab eventKey="perf" title="Perf">
-                            </Tab>
+                            </Tab>}
+                            {hasSubOpPlan&&<Tab eventKey="subopPlan" title="SubOp-Visualization">
+                            </Tab>}
+                            {hasPerf&&<Tab eventKey="perf" title="Perf">
+                            </Tab>}
                         </Tabs>
                         <div style={{
                             visibility: activeLeftTab === "queryPlan" ? "visible" : "hidden",
@@ -182,8 +229,8 @@ const App = () => {
                                 <RelationalPlanViewer height={2 * (window.innerHeight - 90) / 3}
                                                       width={(window.innerWidth - 100) / 2}
                                                       input={data.plan}
-                                                      onOperatorSelect={(id) => setSelectedOps([id])}
-                                                      selectedOps={selectedOps}></RelationalPlanViewer>}
+                                                      onOperatorSelect={(id) => handleRelAlgOpSelection(id)}
+                                                      selectedOps={selectedRelAlgOps}></RelationalPlanViewer>}
                         </div>
                         <div style={{
                             visibility: activeLeftTab === "subopPlan" ? "visible" : "hidden",
@@ -193,8 +240,9 @@ const App = () => {
                                 <SubOpPlanViewer height={2 * (window.innerHeight - 90) / 3}
                                                  width={(window.innerWidth - 100) / 2}
                                                  input={data.subopplan} onOperatorSelect={(id) => {
+                                    handleSubOpSelection(id)
                                 }}
-                                                 selectedOps={[]}></SubOpPlanViewer>}
+                                                 selectedOps={selectedSubOpOps}></SubOpPlanViewer>}
                         </div>
                         <div style={{
                             visibility: activeLeftTab === "perf" ? "visible" : "hidden",
@@ -229,7 +277,7 @@ const App = () => {
 
                                 <MLIRViewer height={2 * (window.innerHeight - 90) / 3}
                                             width={(window.innerWidth - 100) / 2}
-                                            layer={relalgMLIRData} selectedOps={selectedOps}></MLIRViewer>
+                                            layer={relalgMLIRData} selectedOps={selectedRelAlgOps} onOpClick={(d)=>handleRelAlgOpSelection(d.id)}></MLIRViewer>
                             </div>
                             <div style={{
                                 visibility: activeRightTab === "mlir_subop" ? "visible" : "hidden",
@@ -238,7 +286,7 @@ const App = () => {
 
                                 <MLIRViewer height={2 * (window.innerHeight - 90) / 3}
                                             width={(window.innerWidth - 100) / 2}
-                                            layer={subopMLIRData} selectedOps={[]}></MLIRViewer>
+                                            layer={subopMLIRData} selectedOps={selectedSubOpOps} onOpClick={(d)=>handleSubOpSelection(d.id)}></MLIRViewer>
                             </div>
                             <div style={{
                                 visibility: activeRightTab === "mlir_imperative" ? "visible" : "hidden",
@@ -247,7 +295,7 @@ const App = () => {
 
                                 <MLIRViewer height={2 * (window.innerHeight - 90) / 3}
                                             width={(window.innerWidth - 100) / 2}
-                                            layer={imperativeMLIRData} selectedOps={[]}></MLIRViewer>
+                                            layer={imperativeMLIRData} selectedOps={selectedImperativeOps} onOpClick={(d)=>{}}></MLIRViewer>
                             </div>
                             <div style={{
                                 visibility: activeRightTab === "mlir_llvm" ? "visible" : "hidden",
@@ -256,7 +304,7 @@ const App = () => {
 
                                 <MLIRViewer height={2 * (window.innerHeight - 90) / 3}
                                             width={(window.innerWidth - 100) / 2}
-                                            layer={llvmMLIRData} selectedOps={selectedLLVMOps}
+                                            layer={llvmMLIRData} selectedOps={selectedLLVMOps} onOpClick={(d)=>handleLLVMOpSelection(d.id)}
                                             perfInfo={data.perf.generated}></MLIRViewer>
                             </div>
                             <div style={{
@@ -266,7 +314,7 @@ const App = () => {
                                 {hasPerf && <PerfAsmViewer height={2 * (window.innerHeight - 90) / 3}
                                                            width={(window.innerWidth - 100) / 2}
                                                            data={data.perf.generated}
-                                                           onInstrClick={handleInstrClick}></PerfAsmViewer>}
+                                                           onInstrClick={handleInstrClick} selectedLLVMOps={selectedLLVMOps}></PerfAsmViewer>}
                             </div>
                         </div>
                         }

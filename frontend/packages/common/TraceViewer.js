@@ -251,7 +251,7 @@ export const TraceViewer = ({traceData,width, height, onSelect}) => {
                                             <Rect x={offsetX + correctedStart * scaleX} y={offsetY + d.row * rowOffset} height={15}
                                                   width={correctedDuration * scaleX}
                                                   fill={d.category=== "Ignore" ? "white":categoryColors[d.category + "::" + d.name]} stroke={"gray"} strokeWidth={0.4}
-                                                  onClick={() => console.log(d)}></Rect>
+                                                  onClick={() => {}}></Rect>
 
                                             <Text x={offsetX + correctedStart * scaleX} y={offsetY + d.row * rowOffset}
                                                   text={`${d.name} (${extraText})`}

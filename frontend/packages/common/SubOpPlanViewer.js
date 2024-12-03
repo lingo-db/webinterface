@@ -82,7 +82,7 @@ const RenderedNode = ({data, x, y, onOperatorSelect, selectedOps}) => {
             backgroundColor:   selectedOps.includes(data.ref) ? "yellow":"white",
             borderRadius: 5,
             minWidth: 100,
-        }} id={`plan-${data.ref}`} onClick={(e)=>{e.stopPropagation();console.log(e);onOperatorSelect(data.ref)}}>
+        }} id={`plan-${data.ref}`} onClick={(e)=>{e.stopPropagation();onOperatorSelect(data.ref)}}>
             <Operator data={data} onOperatorSelect={onOperatorSelect} selectedOps={selectedOps} />
         </div>
     }

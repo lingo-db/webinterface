@@ -214,7 +214,6 @@ export const RelationalPlanViewer = ({height, width, input, onOperatorSelect, se
         })
         currMinCardinality = Math.log(currMinCardinality)
         maxCardinality = Math.log(maxCardinality)
-        console.log(currMinCardinality, maxCardinality, (20 - 1) / (maxCardinality - minCardinality))
         setCardinalitySlope((20 - 1) / (maxCardinality - minCardinality))
         setMinCardinality(currMinCardinality)
         setNodes(currNodes)
