@@ -21,7 +21,7 @@ import {faPlay} from '@fortawesome/free-solid-svg-icons';
 import Editor from "@monaco-editor/react";
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-//import {queries} from "./queryData";
+import {queries} from "./queryData";
 import {ResultTableViewer} from "./ResultTableViewer";
 import {SubOpPlanViewer} from "@lingodb/common/SubOpPlanViewer";
 import {MLIRViewer} from "@lingodb/common/MLIRViewer";
@@ -95,18 +95,7 @@ const QuerySelection = ({db, cb}) => {
         return null
     }
 }
-const queries = {
-    "tpch-1": [{
-        "query": "1",
-        "content": "-- TPC-H Query 1\n\nselect\n        l_returnflag,\n        l_linestatus,\n        sum(l_quantity) as sum_qty,\n        sum(l_extendedprice) as sum_base_price,\n        sum(l_extendedprice * (1 - l_discount)) as sum_disc_price,\n        sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge,\n        avg(l_quantity) as avg_qty,\n        avg(l_extendedprice) as avg_price,\n        avg(l_discount) as avg_disc,\n        count(*) as count_order\nfrom\n        lineitem\nwhere\n        l_shipdate <= date '1998-12-01' - interval '90' day\ngroup by\n        l_returnflag,\n        l_linestatus\norder by\n        l_returnflag,\n        l_linestatus\n"
-    }, {
-        "query": "2",
-        "content": "-- TPC-H Query 2\n\nselect\n        s_acctbal,\n        s_name,\n        n_name,\n        p_partkey,\n        p_mfgr,\n        s_address,\n        s_phone,\n        s_comment\nfrom\n        part,\n        supplier,\n        partsupp,\n        nation,\n        region\nwhere\n        p_partkey = ps_partkey\n        and s_suppkey = ps_suppkey\n        and p_size = 15\n        and p_type like '%BRASS'\n        and s_nationkey = n_nationkey\n        and n_regionkey = r_regionkey\n        and r_name = 'EUROPE'\n        and ps_supplycost = (\n                select\n                        min(ps_supplycost)\n                from\n                        partsupp,\n                        supplier,\n                        nation,\n                        region\n                where\n                        p_partkey = ps_partkey\n                        and s_suppkey = ps_suppkey\n                        and s_nationkey = n_nationkey\n                        and n_regionkey = r_regionkey\n                        and r_name = 'EUROPE'\n        )\norder by\n        s_acctbal desc,\n        n_name,\n        s_name,\n        p_partkey\nlimit 100\n"
-    }, {
-        "query": "3",
-        "content": "-- TPC-H Query 3\n\nselect\n        l_orderkey,\n        sum(l_extendedprice * (1 - l_discount)) as revenue,\n        o_orderdate,\n        o_shippriority\nfrom\n        customer,\n        orders,\n        lineitem\nwhere\n        c_mktsegment = 'BUILDING'\n        and c_custkey = o_custkey\n        and l_orderkey = o_orderkey\n        and o_orderdate < date '1995-03-15'\n        and l_shipdate > date '1995-03-15'\ngroup by\n        l_orderkey,\n        o_orderdate,\n        o_shippriority\norder by\n        revenue desc,\n        o_orderdate\nlimit 10\n"
-    }]
-}
+
 const DropdownCheckbox = ({label, options, onChange}) => {
     const [selectedOptions, setSelectedOptions] = useState([]);
 
@@ -183,14 +172,15 @@ function App() {
     const fetchQueryPlan = async () => {
         try {
             setQueryPlanLoading(true)
-            const response = await fetch(`${host}/api/${realCardinalities ? 'analyzed_query_plan' : 'query_plan'}`, {
+            const response = await fetch(`${host}/api/analyze`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     database: selectedDB.value,
-                    query: query
+                    query: query,
+                    real_card: realCardinalities
                 })
             });
             const json = await response.json()

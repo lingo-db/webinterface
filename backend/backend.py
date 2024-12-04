@@ -47,113 +47,6 @@ def table_to_json(raw_table):
     return result_dict
 
 
-def get_analyzed_query_plan(query_str, db):
-    if db not in ["tpch-1", "tpcds-1", "uni", "job"]:
-        raise RuntimeError("Unknown Database")
-    # Write query to temporary file
-    with tempfile.NamedTemporaryFile(mode="w", delete=True) as f:
-        f.write(query_str)
-        query_file = f.name
-        f.flush()
-        # Define the chained command as a string
-        command = BINARY_DIR + "sql-to-mlir " + query_file + " " + DATA_ROOT + db + " | " + BINARY_DIR + "mlir-db-opt --use-db " + DATA_ROOT + db + " --relalg-query-opt --relalg-track-tuples"
-        print(command)
-        # Create a temporary file to store the output
-        with tempfile.NamedTemporaryFile(mode='w', delete=True) as tmpfile:
-            # Call the chained command using subprocess.run()
-            result = subprocess.run(command, shell=True, stdout=tmpfile, text=True, timeout=5,
-                                    env={"LINGODB_PARALLELISM": "4"})
-
-            # Check that the command exited successfully
-            if result.returncode == 0:
-                try:
-                    # Build command string
-                    cmd = [BINARY_DIR + "mlir-to-json", tmpfile.name,
-                           DATA_ROOT + db]
-
-                    # Execute command and capture output
-                    output = subprocess.check_output(cmd, universal_newlines=True, stderr=subprocess.STDOUT, timeout=20)
-                    return json.loads(output.split("\n")[0]);
-
-                except subprocess.CalledProcessError as e:
-                    # Print error message to stderr
-                    print(e.output, file=sys.stderr)
-                    raise HTTPException(status_code=400, detail="Query could not be executed")
-                except subprocess.TimeoutExpired as e:
-                    raise HTTPException(status_code=400, detail="Query took too long")
-            else:
-                # Print the error message
-                print(result.stderr.strip())
-
-def analyze(query_str, db):
-    if db not in ["tpch-1", "tpcds-1", "uni", "job"]:
-        raise RuntimeError("Unknown Database")
-    with tempfile.NamedTemporaryFile(mode="w", delete=True) as f:
-        f.write(query_str)
-        query_file = f.name
-        f.flush()
-        with tempfile.TemporaryDirectory() as snapshotdir:
-            print(BINARY_DIR+"run-sql "+query_file+" "+ DATA_ROOT + db)
-            output = subprocess.check_output([BINARY_DIR+"run-sql",query_file, DATA_ROOT + db], universal_newlines=True, stderr=subprocess.STDOUT, timeout=20,
-                                             env={"LINGODB_SNAPSHOT_DIR": snapshotdir, "LINGODB_SNAPSHOT_PASSES": "true", "LINGODB_SNAPSHOT_LEVEL":"important", "LINGODB_EXECUTION_MODE":"NONE"})
-            result = subprocess.run(f"bash {SCRIPT_DIR}/clean-snapshot.sh {BINARY_DIR} {snapshotdir}/important-snapshot-qopt.mlir {snapshotdir}/important-snapshot-qopt.mlir.alt",
-                                             universal_newlines=True, stderr=subprocess.STDOUT, shell=True)
-            print(result)
-            result = subprocess.run(f"bash {SCRIPT_DIR}/clean-snapshot.sh {BINARY_DIR} {snapshotdir}/important-snapshot-subop-opt.mlir  {snapshotdir}/important-snapshot-subop-opt.mlir.alt",
-                                             universal_newlines=True, stderr=subprocess.STDOUT, shell=True)
-            print(os.listdir(snapshotdir))
-
-            relalg_plan = subprocess.check_output([BINARY_DIR + "mlir-to-json", snapshotdir+"/important-snapshot-qopt.mlir.alt"],
-                                             universal_newlines=True, stderr=subprocess.STDOUT)
-            subop_plan = subprocess.check_output([BINARY_DIR + "mlir-subop-to-json", snapshotdir+"/important-snapshot-subop-opt.mlir.alt"],
-                                             universal_newlines=True)
-            analyzed_snapshots = subprocess.check_output([BINARY_DIR + "mlir-analyze-snapshots", snapshotdir+"/important-snapshot-info.json"],
-                                             universal_newlines=True)
-            print(os.listdir(snapshotdir))
-            return {"plan":json.loads(relalg_plan.split("\n")[0]), "subopplan":json.loads(subop_plan.split("\n")[0]), "mlir": json.loads(analyzed_snapshots)}
-
-
-
-    return {}
-
-
-def get_query_plan(query_str, db):
-    if db not in ["tpch-1", "tpcds-1", "uni", "job"]:
-        raise RuntimeError("Unknown Database")
-    # Write query to temporary file
-    with tempfile.NamedTemporaryFile(mode="w", delete=True) as f:
-        f.write(query_str)
-        query_file = f.name
-        f.flush()
-        # Define the chained command as a string
-        command = BINARY_DIR + "sql-to-mlir " + query_file + " " + DATA_ROOT + db + " |  " + BINARY_DIR + "/mlir-db-opt --use-db " + DATA_ROOT + db + " --relalg-query-opt"
-        print(command)
-        # Create a temporary file to store the output
-        with tempfile.TemporaryDirectory(mode='w', delete=True) as tmpfile:
-            # Call the chained command using subprocess.run()
-            result = subprocess.run(command, shell=True, stdout=tmpfile, text=True, timeout=5)
-
-            # Check that the command exited successfully
-            if result.returncode == 0:
-                try:
-                    # Build command string
-                    cmd = [BINARY_DIR + "mlir-to-json", tmpfile.name]
-
-                    # Execute command and capture output
-                    output = subprocess.check_output(cmd, universal_newlines=True, stderr=subprocess.STDOUT, timeout=5)
-                    return json.loads(output.split("\n")[0]);
-
-                except subprocess.CalledProcessError as e:
-                    # Print error message to stderr
-                    print(e.output, file=sys.stderr)
-                    raise HTTPException(status_code=400, detail="Query could not be executed")
-                except json.decoder.JSONDecodeError as e:
-                    raise HTTPException(status_code=400, detail="JSON Query Plan could not be created")
-            else:
-                # Print the error message
-                print(result.stderr.strip())
-
-
 def run_sql_query(query_str, db):
     if db not in ["tpch-1", "tpcds-1", "uni", "job"]:
         raise HTTPException(status_code=403, detail="Unknown Database")
@@ -202,86 +95,51 @@ def run_sql_query(query_str, db):
             os.remove(query_file)
 
 
-def sql_to_mlir(query_str, db):
-    if db not in ["tpch-1", "tpcds-1", "uni", "job"]:
-        raise HTTPException(status_code=403, detail="Unknown Database")
-    # Write query to temporary file
+@api_app.post("/analyze")
+async def analyze(database: str = Body(...), query: str = Body(...), real_card: bool = Body(...)):
+    if database not in ["tpch-1", "tpcds-1", "uni", "job"]:
+        raise RuntimeError("Unknown Database")
     with tempfile.NamedTemporaryFile(mode="w", delete=True) as f:
-        f.write(query_str)
+        f.write(query)
         query_file = f.name
         f.flush()
-        try:
-            # Build command string
-            cmd = [BINARY_DIR + "sql-to-mlir", query_file,
-                   DATA_ROOT + db]
-            # Execute command and capture output
-            output = subprocess.check_output(cmd, universal_newlines=True, timeout=5)
-            print(cmd)
-            return output
+        with tempfile.TemporaryDirectory() as snapshotdir:
+            print(BINARY_DIR + "run-sql " + query_file + " " + DATA_ROOT + database)
+            output = subprocess.check_output([BINARY_DIR + "run-sql", query_file, DATA_ROOT + database],
+                                             universal_newlines=True, stderr=subprocess.STDOUT, timeout=20,
+                                             env={"LINGODB_SNAPSHOT_DIR": snapshotdir,
+                                                  "LINGODB_SNAPSHOT_PASSES": "true",
+                                                  "LINGODB_SNAPSHOT_LEVEL": "important",
+                                                  "LINGODB_EXECUTION_MODE": "NONE"})
+            result = subprocess.run(
+                f"bash {SCRIPT_DIR}/clean-snapshot.sh {BINARY_DIR} {snapshotdir}/important-snapshot-qopt.mlir {snapshotdir}/important-snapshot-qopt.mlir.alt",
+                universal_newlines=True, stderr=subprocess.STDOUT, shell=True)
+            print(result)
+            result = subprocess.run(
+                f"bash {SCRIPT_DIR}/clean-snapshot.sh {BINARY_DIR} {snapshotdir}/important-snapshot-subop-opt.mlir  {snapshotdir}/important-snapshot-subop-opt.mlir.alt",
+                universal_newlines=True, stderr=subprocess.STDOUT, shell=True)
+            print(os.listdir(snapshotdir))
 
-        except subprocess.CalledProcessError as e:
-            # Print error message to stderr
-            print(e.output, file=sys.stderr)
-            raise HTTPException(status_code=400, detail="Failed to generate MLIR")
+            relalg_plan = subprocess.check_output(
+                [BINARY_DIR + "mlir-to-json", snapshotdir + "/important-snapshot-qopt.mlir.alt"] + (
+                    [DATA_ROOT + database] if real_card else []),
+                universal_newlines=True, stderr=subprocess.STDOUT)
+            subop_plan = subprocess.check_output(
+                [BINARY_DIR + "mlir-subop-to-json", snapshotdir + "/important-snapshot-subop-opt.mlir.alt"],
+                universal_newlines=True)
+            analyzed_snapshots = subprocess.check_output(
+                [BINARY_DIR + "mlir-analyze-snapshots", snapshotdir + "/important-snapshot-info.json"],
+                universal_newlines=True)
+            print(os.listdir(snapshotdir))
+            return {"plan": json.loads(relalg_plan.split("\n")[0]), "subopplan": json.loads(subop_plan.split("\n")[0]),
+                    "mlir": json.loads(analyzed_snapshots)}
 
-
-def mlir_opt(mlir_str, db, opts):
-    if db and db not in ["tpch-1", "tpcds-1", "uni", "job"]:
-        raise HTTPException(status_code=403, detail="Unknown Database")
-    # Write query to temporary file
-    with tempfile.NamedTemporaryFile(mode="w", delete=True) as f:
-        f.write(mlir_str)
-        mlir_file = f.name
-        f.flush()
-        try:
-            # Build command string
-            cmd = [BINARY_DIR + "mlir-db-opt"]
-            if db:
-                cmd.append("--use-db")
-                cmd.append(DATA_ROOT + db)
-            cmd.extend(opts)
-            cmd.append(mlir_file)
-            # Execute command and capture output
-            output = subprocess.check_output(cmd, universal_newlines=True, timeout=5)
-            print(cmd)
-            return output
-
-        except subprocess.CalledProcessError as e:
-            # Print error message to stderr
-            print(e.output, file=sys.stderr)
-            raise HTTPException(status_code=400, detail="Failed to generate MLIR")
-
-
-@api_app.post("/query_plan")
-async def query_plan(database: str = Body(...), query: str = Body(...)):
-    return analyze(query, database)
-
-
-@api_app.post("/analyzed_query_plan")
-async def analyzed_query_plan(database: str = Body(...), query: str = Body(...)):
-    return get_analyzed_query_plan(query, database)
+    return {}
 
 
 @api_app.post("/execute")
 async def execute(database: str = Body(...), query: str = Body(...)):
     return run_sql_query(query, database)
-
-
-@api_app.post("/mlir_steps")
-async def mlir_steps(database: str = Body(...), query: str = Body(...)):
-    canonical = sql_to_mlir(query, database)
-    qopt = mlir_opt(canonical, database, ["--relalg-query-opt"])
-    subop = mlir_opt(qopt, None, ["--lower-relalg-to-subop"])
-    imperative = mlir_opt(subop, None, ["--lower-subop"])
-    lowlevel = mlir_opt(imperative, None, ["--lower-db", "--lower-dsa"])
-
-    return {
-        "canonical": canonical,
-        "qopt": qopt,
-        "subop": subop,
-        "imperative": imperative,
-        "lowlevel": lowlevel,
-    }
 
 
 app.mount("/api", api_app)

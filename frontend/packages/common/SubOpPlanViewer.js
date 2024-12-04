@@ -4,10 +4,6 @@ import {Button, Col, Container, Form, Navbar, Row} from 'react-bootstrap';
 import {PlanViewer} from "./PlanViewer";
 
 
-
-
-
-
 const OperatorContainer = ({heading, children}) => {
     return <div style={{padding: 5}}>
         <div style={{
@@ -43,6 +39,8 @@ const Expression = ({data}) => {
             return <div style={{display: "inline"}}>{"?"}</div>
         } else if (data.leaf_type === "null") {
             return <div style={{display: "inline"}}>{"null"}</div>
+        }else if (data.leaf_type==="member"){
+            return <div style={{display: "inline"}}>{data.member}</div>
         }
     } else if (data.type === "expression_inner") {
         const toRender = [data.strings[0]]
@@ -57,7 +55,7 @@ const Expression = ({data}) => {
 }
 
 const RenderedNode = ({data, x, y, onOperatorSelect, selectedOps}) => {
-    if (data.type==="col_arg"){
+    if (data.type === "col_arg") {
         return <div style={{
             transform: `translate(${x}px, ${y}px)`,
             position: "absolute",
@@ -66,8 +64,7 @@ const RenderedNode = ({data, x, y, onOperatorSelect, selectedOps}) => {
         }} id={`plan-${data.ref}`}>
             {data.col.displayName}
         </div>
-    }else
-    if (data.type === "arg" || data.type==="implicit") {
+    } else if (data.type === "arg" || data.type === "implicit") {
         return <div style={{
             transform: `translate(${x}px, ${y}px)`,
             position: "absolute",
@@ -79,11 +76,14 @@ const RenderedNode = ({data, x, y, onOperatorSelect, selectedOps}) => {
             transform: `translate(${x}px, ${y}px)`,
             position: "absolute",
             border: "1px solid black",
-            backgroundColor:   selectedOps.includes(data.ref) ? "yellow":"white",
+            backgroundColor: selectedOps.includes(data.ref) ? "yellow" : "white",
             borderRadius: 5,
             minWidth: 100,
-        }} id={`plan-${data.ref}`} onClick={(e)=>{e.stopPropagation();onOperatorSelect(data.ref)}}>
-            <Operator data={data} onOperatorSelect={onOperatorSelect} selectedOps={selectedOps} />
+        }} id={`plan-${data.ref}`} onClick={(e) => {
+            e.stopPropagation();
+            onOperatorSelect(data.ref)
+        }}>
+            <Operator data={data} onOperatorSelect={onOperatorSelect} selectedOps={selectedOps}/>
         </div>
     }
 }
@@ -165,13 +165,15 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
                     {inputs}
                 </div>
                 <PlanViewer nested={true} height={1000} width={700} nodes={nodes} edges={edges}
-                            renderNode={(node, x, y) => (<RenderedNode x={x} y={y} data={node} onOperatorSelect={onOperatorSelect} selectedOps={selectedOps}/>)}
+                            renderNode={(node, x, y) => (
+                                <RenderedNode x={x} y={y} data={node} onOperatorSelect={onOperatorSelect}
+                                              selectedOps={selectedOps}/>)}
                             renderEdge={(edge) => {
                                 let points = edge.points.map((point) => `${point.x},${point.y}`).join(" ");
 
                                 return <g>
                                     <polyline key={`edge,${edge.id.v},${edge.id.w}`} points={points} fill={"none"}
-                                              stroke={"white"} strokeWidth={1} strokeLinecap={"square"}
+                                              stroke={"black"} strokeWidth={1} strokeLinecap={"square"}
                                               strokeOpacity={0.5}></polyline>
                                     <text x={edge.points[1].x + 20} y={edge.points[1].y} stroke={"black"}
                                           strokeWidth={"0.2"} fontSize={10}>{edge.label}</text>
@@ -184,7 +186,7 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
 
                             return <line x1={n.computedX} y1={n.computedY} x2={input.argument.argnr * 100 + 50} y2="0"
                                          fill={"none"}
-                                         stroke={"white"} strokeWidth={1} strokeLinecap={"square"}
+                                         stroke={"black"} strokeWidth={1} strokeLinecap={"square"}
                                          strokeDasharray={"2 2"}
                                          strokeOpacity={0.5}></line>
                         })}
@@ -193,7 +195,7 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
                                 let n = nodesPos[computeRef(result)]
                                 return <line x1={n.computedX} y1={n.computedY} x2={i * 100 + 50} y2={requiredHeight}
                                              fill={"none"}
-                                             stroke={"white"} strokeWidth={1} strokeLinecap={"square"}
+                                             stroke={"black"} strokeWidth={1} strokeLinecap={"square"}
                                              strokeDasharray={"2 2"}
                                              strokeOpacity={0.5}></line>
                             })}
@@ -211,7 +213,41 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
 
 
     } else if (data.type === "suboperator") {
-        if (data.subop === "nested_map") {
+        if (data.subop === "create_thread_local") {
+            return <OperatorContainer heading={"CreateThreadLocal"}/>
+        } else if (data.subop === "get_external") {
+            return <OperatorContainer heading={"GetExternal"}/>
+        } else if (data.subop === "merge") {
+            return <OperatorContainer heading={"Merge"}></OperatorContainer>
+        } else if (data.subop === "scan") {
+            return <OperatorContainer heading={"Scan"}>
+                {data.mapping.map((m) => <div>{m.member} → <Expression data={m.column}/></div>)}
+            </OperatorContainer>
+        } else if (data.subop === "scan_list") {
+            return <OperatorContainer heading={"Scan(List)"}>
+                Element → <Expression data={data.elem}/>
+            </OperatorContainer>
+        } else if (data.subop === "scan_ref") {
+            return <OperatorContainer heading={"ScanRefs"}>
+                Ref → <Expression data={data.reference}/>
+            </OperatorContainer>
+        } else if (data.subop === "union") {
+            return <OperatorContainer heading={"Union"}/>
+        } else if (data.subop === "map") {
+            return <OperatorContainer heading={`\u2254\u2003 Map`}>
+                {data.computed.map((comp) => <div><Expression data={comp.computed}/>: <Expression
+                    data={comp.expression}/>
+                </div>)}
+            </OperatorContainer>
+        } else if (data.subop === "filter") {
+            return <OperatorContainer heading={`Filter (${data.semantic})`}>
+                {data.columns.map((c) => (<div><Expression data={c}/></div>))}
+            </OperatorContainer>
+        } else if (data.subop === "renaming") {
+            return <OperatorContainer heading={"Renaming"}>
+                {data.renamed.map((r) => (<div><Expression data={r.old}/> → <Expression data={r.new}/></div>))}
+            </OperatorContainer>
+        } else if (data.subop === "nested_map") {
             let nodes = []
             data.inputs.forEach(input => {
                 nodes.push({
@@ -222,7 +258,7 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
                     accesses: []
                 })
             })
-            let lastStep=undefined
+            let lastStep = undefined
             let edges = []
 
             data.subops.forEach((planNode) => {
@@ -277,11 +313,13 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
                     accesses: []
                 })
             })
-            data.implicitInputs.forEach((i)=>{
-                nodes.push({ref: computeRef(i),
+            data.implicitInputs.forEach((i) => {
+                nodes.push({
+                    ref: computeRef(i),
                     type: "implicit",
-                    consuming:[],
-                    accesses:[]})
+                    consuming: [],
+                    accesses: []
+                })
             })
             return <div style={{display: "flex"}}>
                 <div style={{
@@ -303,7 +341,9 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
                     flex: 1
                 }}>
                     <PlanViewer nested={true} height={1000} width={700} nodes={nodes} edges={edges}
-                                renderNode={(node, x, y) => (<RenderedNode x={x} y={y} data={node} onOperatorSelect={onOperatorSelect} selectedOps={selectedOps}/>)}
+                                renderNode={(node, x, y) => (
+                                    <RenderedNode x={x} y={y} data={node} onOperatorSelect={onOperatorSelect}
+                                                  selectedOps={selectedOps}/>)}
                                 renderEdge={(edge) => {
                                     let points = edge.points.map((point) => `${point.x},${point.y}`).join(" ");
 
@@ -327,42 +367,104 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
             </div>
 
 
-        } else if (data.subop === "get_external") {
-            return <OperatorContainer heading={"GetExternal"}/>
-        } else if (data.subop === "gather") {
+        } else if (data.subop === "create_from") {
+            return <OperatorContainer heading={"CreateFrom"}/>
+        } else if (data.subop === "create_simple_state") {
+            return <OperatorContainer heading={"Create"}>
+                SimpleState
+            </OperatorContainer>
+        } else if (data.subop === "create_heap") {
+            return <OperatorContainer heading={"Create Heap"}>
+            </OperatorContainer>
+        } else if (data.subop === "generic_create") {
+            return <OperatorContainer heading={"Create"}>
+
+            </OperatorContainer>
+        } else if (data.subop === "create_array") {
+            return <OperatorContainer heading={"Create"}>
+                Array
+            </OperatorContainer>
+        } else if (data.subop === "create_sorted_view") {
+            return <OperatorContainer heading={"Create"}>
+                SortedView
+            </OperatorContainer>
+        } else if (data.subop === "create_hash_indexed_view") {
+            return <OperatorContainer heading={"Create"}>
+                HashIndexedView
+            </OperatorContainer>
+        } else if (data.subop === "create_continuous_view") {
+            return <OperatorContainer heading={"Create"}>
+                ContinuousView
+            </OperatorContainer>
+        } else if (data.subop === "create_segment_tree_view") {
+            return <OperatorContainer heading={"Create"}>
+                SegmentTreeView
+            </OperatorContainer>
+        }else if (data.subop === "materialize") {
+            return <OperatorContainer heading={"Materialize"}>
+                {data.mapping.map((m) => <div><Expression data={m.column}/> →{m.member}</div>)}
+
+            </OperatorContainer>
+        }else if (data.subop === "lookup_or_insert") {
+            return <OperatorContainer heading={"LookupOrInsert"}>
+                Ref: <Expression data={data.reference}/>
+            </OperatorContainer>
+        }else if (data.subop === "insert") {
+            return <OperatorContainer heading={"Insert"}>
+                {data.mapping.map((m) => <div><Expression data={m.column}/> →{m.member}</div>)}
+
+            </OperatorContainer>
+        }else if (data.subop === "lookup") {
+            return <OperatorContainer heading={"Lookup"}>
+                Ref: <Expression data={data.reference}/>
+            </OperatorContainer>
+        }else if (data.subop === "get_begin_reference") {
+            return <OperatorContainer heading={"GetBegin"}>
+                Ref: <Expression data={data.reference}/>
+            </OperatorContainer>
+        }else if (data.subop === "get_end_reference") {
+            return <OperatorContainer heading={"GetEnd"}>
+                Ref: <Expression data={data.reference}/>
+            </OperatorContainer>
+        }else if (data.subop === "entries_between") {
+            return <OperatorContainer heading={"EntriesBetween"}>
+                diff(<Expression data={data.leftRef}/>,<Expression data={data.rightRef}/>)  → <Expression data={data.between}/>
+
+            </OperatorContainer>
+        }else if (data.subop === "offset_reference_by") {
+            return <OperatorContainer heading={"OffsetBy"}>
+                <Expression data={data.reference}/>+<Expression data={data.offset}/>  → <Expression data={data.newRef}/>
+
+            </OperatorContainer>
+        }else if (data.subop === "unwrap_optional_ref") {
+            return <OperatorContainer heading={"UnwrapOptionalRef"}>
+                <Expression data={data.optionalRef}/>?  → <Expression data={data.reference}/>
+
+            </OperatorContainer>
+        }   else if (data.subop === "gather") {
             return <OperatorContainer heading={"Gather"}>
                 {data.mapping.map((m) => <div>{m.member} → <Expression data={m.column}/></div>)}
 
             </OperatorContainer>
-        } else if (data.subop === "scan_ref") {
-            return <OperatorContainer heading={"ScanRefs"}></OperatorContainer>
-        } else if (data.subop === "materialize") {
-            return <OperatorContainer heading={"Materialize"}>
-                {data.mapping.map((m) => <div> <Expression data={m.column}/>  →{m.member}</div>)}
+        }else if (data.subop === "scatter") {
+            return <OperatorContainer heading={"Scatter"}>
+                Ref: <Expression data={data.reference}/>
+                {data.mapping.map((m) => <div><Expression data={m.column}/> →{m.member}</div>)}
 
             </OperatorContainer>
-        } else if (data.subop === "merge") {
-            return <OperatorContainer heading={"Merge"}></OperatorContainer>
-        } else if (data.subop === "map") {
-            return <OperatorContainer heading={`\u2254\u2003 Map`}>
-                {data.computed.map((comp) => <div><Expression data={comp.computed}/>: <Expression
-                    data={comp.expression}/>
-                </div>)}
+        }else if (data.subop === "reduce") {
+            return <OperatorContainer heading={"Reduce"}>
+                Ref: <Expression data={data.reference}/>
+                {data.updated.map((u) => <div>{u.member} = <Expression data={u.expression}/></div>)}
+
             </OperatorContainer>
-        } else if (data.subop === "filter") {
-            return <OperatorContainer heading={`Filter (${data.semantic})`}>
-                {data.columns.map((c) => (<div><Expression data={c}/></div>))}
-            </OperatorContainer>
-        } else {
+        }  else {
             return <OperatorContainer heading={"?"}></OperatorContainer>
         }
     } else {
         return <OperatorContainer heading={"?"}></OperatorContainer>
     }
 }
-
-
-
 
 
 export const SubOpPlanViewer = ({height, width, input, onOperatorSelect, selectedOps}) => {
@@ -373,8 +475,8 @@ export const SubOpPlanViewer = ({height, width, input, onOperatorSelect, selecte
 
     const process = (subOpPlan) => {
         let lastStep = undefined
-        let currEdges=[]
-        let currNodes=[]
+        let currEdges = []
+        let currNodes = []
         subOpPlan.forEach((planNode) => {
             currNodes.push(planNode)
             planNode.consuming.forEach((p) => {
@@ -408,37 +510,42 @@ export const SubOpPlanViewer = ({height, width, input, onOperatorSelect, selecte
     }, [input])
 
 
+    return (nodes && edges && <PlanViewer nested={false} height={height} width={width} nodes={nodes} edges={edges}
+                                          renderNode={(node, x, y) => (
+                                              <RenderedNode x={x} y={y} data={node} onOperatorSelect={onOperatorSelect}
+                                                            selectedOps={selectedOps}/>)}
+                                          renderEdge={(edge, nodesPos) => {
+                                              let edgePoints = edge.points.map((point) => {
+                                                  return {x: point.x, y: point.y}
+                                              })
 
-    return (nodes&&edges&&<PlanViewer nested={false} height={height} width={width} nodes={nodes} edges={edges}
-                        renderNode={(node, x, y) => (<RenderedNode x={x} y={y} data={node} onOperatorSelect={onOperatorSelect} selectedOps={selectedOps}/>)}
-                        renderEdge={(edge, nodesPos) => {
-                            let edgePoints = edge.points.map((point) => {
-                                return {x: point.x, y: point.y}
-                            })
+                                              if (edge.type === "requiredInputs") {
+                                                  edgePoints[0].x = nodesPos[edge.id.v].renderX + edge.meta.off1
+                                                  edgePoints[edgePoints.length - 1].x = nodesPos[edge.id.w].renderX + edge.meta.off2
+                                                  let points = edgePoints.map((point) => `${point.x},${point.y}`).join(" ");
 
-                            if (edge.type === "requiredInputs") {
-                                edgePoints[0].x = nodesPos[edge.id.v].renderX + edge.meta.off1
-                                edgePoints[edgePoints.length - 1].x = nodesPos[edge.id.w].renderX + edge.meta.off2
-                                let points = edgePoints.map((point) => `${point.x},${point.y}`).join(" ");
+                                                  return <g>
+                                                      <polyline key={`edge,${edge.id.v},${edge.id.w}`} points={points}
+                                                                fill={"none"}
+                                                                stroke={"black"} strokeWidth={1}
+                                                                strokeLinecap={"square"}
+                                                                strokeOpacity={0.5}></polyline>
+                                                  </g>
+                                              } else if (edge.type === "executionOrder") {
+                                                  let points = edgePoints.map((point) => `${point.x},${point.y}`).join(" ");
 
-                                return <g>
-                                    <polyline key={`edge,${edge.id.v},${edge.id.w}`} points={points} fill={"none"}
-                                              stroke={"white"} strokeWidth={1} strokeLinecap={"square"}
-                                              strokeOpacity={0.5}></polyline>
-                                </g>
-                            } else if (edge.type === "executionOrder") {
-                                let points = edgePoints.map((point) => `${point.x},${point.y}`).join(" ");
+                                                  return <g>
+                                                      <polyline key={`edge,${edge.id.v},${edge.id.w}`} points={points}
+                                                                fill={"none"}
+                                                                stroke={"gray"} strokeWidth={1} strokeLinecap={"square"}
+                                                                strokeDasharray={"4"}
+                                                                strokeOpacity={0.5}></polyline>
+                                                      <text x={edge.points[1].x + 20} y={edge.points[1].y}
+                                                            stroke={"black"}
+                                                            strokeWidth={"0.2"} fontSize={10}>Order
+                                                      </text>
+                                                  </g>
+                                              }
 
-                                return <g>
-                                    <polyline key={`edge,${edge.id.v},${edge.id.w}`} points={points} fill={"none"}
-                                              stroke={"gray"} strokeWidth={1} strokeLinecap={"square"}
-                                              strokeDasharray={"4"}
-                                              strokeOpacity={0.5}></polyline>
-                                    <text x={edge.points[1].x + 20} y={edge.points[1].y} stroke={"black"}
-                                          strokeWidth={"0.2"} fontSize={10}>Order
-                                    </text>
-                                </g>
-                            }
-
-                        }}/>)
+                                          }}/>)
 }
