@@ -1,0 +1,123 @@
+name: Build webinterface docker
+
+on:
+  push:
+    branches:
+      - main
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  LINGODB_REPOSITORY: lingo-db/lingodb-test-actions
+
+jobs:
+  build-docker:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    steps:
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Create docker-build path
+        run: mkdir docker-uild
+      - name: Install dependencies
+        run: yarn install
+        working-directory: frontend
+      - name: Build WebInterface Frontend
+        run: env REACT_APP_API_URL="" env BUILD_PATH="../../../docker-build/frontend" yarn workspace @lingodb/interface build
+        working-directory: frontend
+      - name: Authenticate GitHub CLI
+        run: echo "${{ secrets.LINGODB_TOKEN }}" | gh auth login --with-token
+      - name: Read LingoDB Commit
+        id: get-lingodb-commit
+        run: echo "lingodb_commit=$(cat lingodb-commit.txt)" >> $GITHUB_OUTPUT
+      - name: Trigger build of lingodb binaries
+        id: trigger-build
+        run: |
+          gh api repos/${{ env.LINGODB_REPOSITORY }}/actions/workflows/release-for-webinterface.yml/dispatches -F ref="main" -F inputs[ref]="b0d8f7a6f5be75a1b545ac54764473048f36b5d7"
+
+      - name: Wait for a few seconds
+        run: sleep 5
+
+      - name: Get workflow run ID
+        id: get-run-id
+        run: |
+          run_id=$(gh api repos/${{ env.LINGODB_REPOSITORY }}/actions/workflows/release-for-webinterface.yml/runs | jq -r '.workflow_runs[0].id')
+          echo "build_run_id=$run_id" >> $GITHUB_OUTPUT
+      - name: Get Workflow Run Status and Wait
+        id: wait-for-run
+        run: |
+          build_run_id="${{ steps.get-run-id.outputs.build_run_id }}"
+
+          echo "Checking status of workflow run with ID $build_run_id"
+
+          while :; do
+            status=$(gh api \
+              repos/${{ env.LINGODB_REPOSITORY }}/actions/runs/$build_run_id \
+              --jq '.status')
+
+            echo "Current status: $status"
+
+            if [[ "$status" == "completed" ]]; then
+              conclusion=$(gh api \
+                repos/${{ env.LINGODB_REPOSITORY }}/actions/runs/$build_run_id \
+                --jq '.conclusion')
+
+              echo "Workflow completed with conclusion: $conclusion"
+
+              if [[ "$conclusion" != "success" ]]; then
+                echo "Workflow did not succeed. Failing current workflow."
+                exit 1
+              fi
+
+              break
+            fi
+
+            echo "Waiting for 10 seconds before checking again..."
+            sleep 10
+          done
+      - name: Download and Extract LingoDB binaries
+        run: |
+          build_run_id="${{ steps.get-run-id.outputs.build_run_id }}"
+
+          echo "Fetching artifact for workflow run ID $build_run_id"
+
+          artifact_id=$(gh api \
+            repos/${{ env.LINGODB_REPOSITORY }}/actions/runs/$build_run_id/artifacts \
+            --jq '.artifacts[0].id')
+
+          echo "Artifact ID: $artifact_id"
+
+          gh api \
+            repos/${{ env.LINGODB_REPOSITORY }}/actions/artifacts/$artifact_id/zip > artifact.zip
+
+          mkdir -p docker-build
+          unzip artifact.zip -d docker-build/lingodb-binaries
+
+          echo "Artifact extracted to docker-build directory."
+      - name: Build and push Docker image
+        id: push
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/lingo-db/webinterface:latest, ghcr.io/lingo-db/webinterface:${{ github.sha }}
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+

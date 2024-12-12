@@ -62,7 +62,7 @@ def run_sql_query(query_str, db):
 
         # Execute command and capture output
         output = subprocess.check_output(cmd, universal_newlines=True, stderr=subprocess.STDOUT, timeout=20,
-                                         env={"LINGODB_PARALLELISM": "4"})
+                                         env={**os.environ,"LINGODB_PARALLELISM": "4"})
         # Parse output and skip first and last 4 lines
         splitted = output.split("\n")
         header_list = splitted[-2].split()
@@ -107,7 +107,7 @@ async def analyze(database: str = Body(...), query: str = Body(...), real_card: 
             print(BINARY_DIR + "run-sql " + query_file + " " + DATA_ROOT + database)
             output = subprocess.check_output([BINARY_DIR + "run-sql", query_file, DATA_ROOT + database],
                                              universal_newlines=True, stderr=subprocess.STDOUT, timeout=20,
-                                             env={"LINGODB_SNAPSHOT_DIR": snapshotdir,
+                                             env={**os.environ,"LINGODB_SNAPSHOT_DIR": snapshotdir,
                                                   "LINGODB_SNAPSHOT_PASSES": "true",
                                                   "LINGODB_SNAPSHOT_LEVEL": "important",
                                                   "LINGODB_EXECUTION_MODE": "NONE"})

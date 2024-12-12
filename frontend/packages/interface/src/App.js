@@ -1,10 +1,8 @@
-import logo from './logo.svg';
 import './App.css';
 import {RelationalPlanViewer} from "@lingodb/common/RelationalPlanViewer"
 import {useRef, useState} from "react";
 import {
     Button,
-    Table,
     Tabs,
     Tab,
     ButtonGroup,
@@ -168,7 +166,7 @@ function App() {
             console.log(query)
         }
     }
-    const host = "http://127.0.0.1:8000"
+    const host = process.env.REACT_APP_API_URL
     const fetchQueryPlan = async () => {
         try {
             setQueryPlanLoading(true)
@@ -192,7 +190,6 @@ function App() {
             setSubOpPlan(json.subopplan)
             console.log(json.mlir)
             setLayers(json.mlir)
-            const relalgBaseRef=getBaseReference(json.mlir[1].passInfo.file)
             const analyzed= analyzeLayers(json.mlir)
             console.log("layerInfo", analyzed)
             setLayerInfo(analyzed)
