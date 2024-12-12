@@ -1,4 +1,4 @@
-import {useEffect, useRef} from "react";
+import {useRef} from "react";
 
 
 
@@ -36,12 +36,7 @@ export const PerfAsmViewer = ({data, selectedOps, width, height, onInstrClick,se
         }
         return "white"
     }
-    /*useEffect(() => {
-        if (selectedOps.length > 0 && scrollableDivRef) {
-            let currentElement=document.getElementById(selectedOps[0])
-            currentElement.scrollIntoView({behavior: "smooth", block: "center"});
-        }
-    }, [selectedOps]);*/
+
     return (<div ref={scrollableDivRef} style={{maxWidth: width, maxHeight: height, overflow: "auto"}}>
         {
             data.map((f)=><Func data={f} selectionState={getBackground} onInstrClick={onInstrClick}/> )
