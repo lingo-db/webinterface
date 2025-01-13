@@ -186,12 +186,9 @@ function App() {
                 throw new Error(json.detail);
             }
             setQueryPlan(json.plan);
-            console.log(json.subopplan)
             setSubOpPlan(json.subopplan)
-            console.log(json.mlir)
             setLayers(json.mlir)
             const analyzed= analyzeLayers(json.mlir)
-            console.log("layerInfo", analyzed)
             setLayerInfo(analyzed)
 
         } catch (error) {
@@ -341,8 +338,8 @@ function App() {
                         <Tab eventKey="queryPlan" title="QueryPlan">
 
                         </Tab>
-                        <Tab eventKey="subopPlan" title="SubOperators">
-                        </Tab>
+                        {false&&(<Tab eventKey="subopPlan" title="SubOperators">
+                        </Tab>)}
                         <Tab eventKey="mlir" title="MLIR (RelAlg)"/>
                         <Tab eventKey="mlir2" title="MLIR (SubOp)"/>
                         <Tab eventKey="mlir3" title="MLIR (HL. Imperative)"/>
@@ -362,14 +359,14 @@ function App() {
                                                              selectedOps={selectedRelAlgOps}/>
                         </div>
                     </div>
-                    <div eventKey="subopPlan" title="SubOperatorPlan"
+                    {false&&(<div eventKey="subopPlan" title="SubOperatorPlan"
                          style={{visibility: activeTab === "subopPlan" ? "visible" : "hidden", position: 'absolute'}}>
                         <div style={{height: '50vh', backgroundColor: "gray"}}>
                             <SubOpPlanViewerWithLoading input={subOpPlan} loading={queryPlanLoading}
                                                         error={queryPlanError} selectedOps={selectedSubOpOps}
                                                         onOperatorSelect={handleSubOpOpSelection}/>
                         </div>
-                    </div>
+                    </div>)}
                     <div eventKey="mlir" title="MLIR"
                          style={{
                              visibility: activeTab === "mlir" ? "visible" : "hidden",
