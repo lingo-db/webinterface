@@ -35,18 +35,20 @@ jobs:
       - name: Install dependencies
         run: yarn install
         working-directory: frontend
+      - name: Read LingoDB Commit
+        id: get-lingodb-commit
+        run: |
+          echo "lingodb_short_commit=$(git rev-parse --short "$(cat lingodb-commit)" )" >> $GITHUB_OUTPUT        
+          echo "lingodb_commit=$(cat lingodb-commit)" >> $GITHUB_OUTPUT
       - name: Build WebInterface Frontend
-        run: env REACT_APP_API_URL="" env BUILD_PATH="../../../docker-build/frontend" yarn workspace @lingodb/interface build
+        run: env REACT_APP_LINGODB_COMMIT="${{ steps.get-lingodb-commit.outputs.lingodb_short_commit }}" env REACT_APP_API_URL="" env BUILD_PATH="../../../docker-build/frontend" yarn workspace @lingodb/interface build
         working-directory: frontend
       - name: Authenticate GitHub CLI
         run: echo "${{ secrets.LINGODB_TOKEN }}" | gh auth login --with-token
-      - name: Read LingoDB Commit
-        id: get-lingodb-commit
-        run: echo "lingodb_commit=$(cat lingodb-commit.txt)" >> $GITHUB_OUTPUT
       - name: Trigger build of lingodb binaries
         id: trigger-build
         run: |
-          gh api repos/${{ env.LINGODB_REPOSITORY }}/actions/workflows/release-for-webinterface.yml/dispatches -F ref="main" -F inputs[ref]="b0d8f7a6f5be75a1b545ac54764473048f36b5d7"
+          gh api repos/${{ env.LINGODB_REPOSITORY }}/actions/workflows/release-for-webinterface.yml/dispatches -F ref="main" -F inputs[ref]="${{ steps.get-lingodb-commit.outputs.lingodb_commit }}"
 
       - name: Wait for a few seconds
         run: sleep 5

@@ -28,7 +28,7 @@ if "WEBINTERFACE_LOCAL" in os.environ:
         allow_headers=["*"],
     )
 
-memory_limit = 10 * 1024 * 1024 * 1024
+memory_limit =(int)  (3.3 * 1024 * 1024 * 1024)
 resource.setrlimit(resource.RLIMIT_AS, (memory_limit, memory_limit))
 
 

@@ -83,7 +83,7 @@ const QuerySelection = ({db, cb}) => {
             const f = availableQueries.filter((q) => q.query === eventKey)
             cb(f[0].content)
         }
-        return (<DropdownButton id="dropdown-basic-button" title="Select Query" onSelect={handleSelect}>
+        return (<DropdownButton as={ButtonGroup} id="dropdown-basic-button" title="Select Query" onSelect={handleSelect}>
                 {availableQueries.map(q => (
                     <Dropdown.Item eventKey={q.query}>{q.query}</Dropdown.Item>
                 ))}
@@ -109,7 +109,7 @@ const DropdownCheckbox = ({label, options, onChange}) => {
     };
 
     return (
-        <DropdownButton title={label} variant="secondary">
+        <DropdownButton as={ButtonGroup} title={label} variant="secondary">
             <Form>
                 <FormGroup>
                     {options.map((option, index) => (
@@ -167,6 +167,7 @@ function App() {
         }
     }
     const host = process.env.REACT_APP_API_URL
+    const lingodb_commit=process.env.REACT_APP_LINGODB_COMMIT
     const fetchQueryPlan = async () => {
         try {
             setQueryPlanLoading(true)
@@ -300,9 +301,8 @@ function App() {
             <h2>SQL WebInterface</h2>
             <Alert variant="warning">
                 <b>Note!</b> This webinterface is for demo purposes only, and especially not suited for benchmarking.
-                It runs with 4 threads on a very old, low-end server (i7-3770 CPU, 32 GB), and LingoDB executes queries
-                with additional verifications.
-                Furthermore, every request is processed by executing one of LingoDB's command line tools which first
+                It runs with 4 threads on a small virtual machine (4 GiB RAM, 4 virtual cores), and LingoDB executes queries
+                with additional verifications. Furthermore, every request is processed by executing one of LingoDB's command line tools which first
                 loads the data set into memory, increasing the observable latency significantly.
             </Alert>
             <Editor
@@ -314,12 +314,10 @@ function App() {
             />
             <div style={{textAlign: "center"}}>
                 <ButtonGroup>
-                    <div id="rounded">
                         <Button variant="primary" onClick={handleExecute}>
                             <FontAwesomeIcon icon={faPlay}></FontAwesomeIcon> Execute Query
                         </Button>
-                    </div>
-                    <DropdownButton id="dropdown-basic-button" title={selectedDB.label} onSelect={handleSelectDB}>
+                    <DropdownButton as={ButtonGroup} id="dropdown-basic-button" title={selectedDB.label} onSelect={handleSelectDB}>
                         <Dropdown.Item eventKey="tpch-1">TPC-H (SF1)</Dropdown.Item>
                         <Dropdown.Item eventKey="tpcds-1">TPC-DS (SF1)</Dropdown.Item>
                         <Dropdown.Item eventKey="job">JOB</Dropdown.Item>
@@ -328,6 +326,9 @@ function App() {
                     <QuerySelection db={selectedDB.value} cb={(content) => setQuery(content)}></QuerySelection>
                     <DropdownCheckbox label="Options" options={[{label: 'Real Cardinalities', value: 'real-cards'}]}
                                       onChange={handleOptionsChange}/>
+                    <a href={`https://github.com/lingo-db/lingo-db/commit/${lingodb_commit}`} rel="noreferrer" target="_blank" className="btn btn-outline-primary">
+                        LingoDB@{lingodb_commit}
+                    </a>
                 </ButtonGroup>
             </div>
             {showResults &&
