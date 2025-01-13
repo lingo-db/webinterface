@@ -2,7 +2,7 @@ version: '3.2'
 
 services:
     webinterface:
-        image: gitlab.db.in.tum.de:5005/lingo-db/webinterface
+        image: ghcr.io/lingo-db/webinterface:latest
         volumes:
             - type: bind
               source: './data'
