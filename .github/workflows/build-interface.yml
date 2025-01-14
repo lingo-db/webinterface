@@ -7,7 +7,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  LINGODB_REPOSITORY: lingo-db/lingodb-test-actions
+  LINGODB_REPOSITORY: lingo-db/lingo-db
 
 jobs:
   build-docker:
