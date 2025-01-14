@@ -339,8 +339,8 @@ function App() {
                         <Tab eventKey="queryPlan" title="QueryPlan">
 
                         </Tab>
-                        {false&&(<Tab eventKey="subopPlan" title="SubOperators">
-                        </Tab>)}
+                        <Tab eventKey="subopPlan" title="SubOperators">
+                        </Tab>
                         <Tab eventKey="mlir" title="MLIR (RelAlg)"/>
                         <Tab eventKey="mlir2" title="MLIR (SubOp)"/>
                         <Tab eventKey="mlir3" title="MLIR (HL. Imperative)"/>
@@ -360,14 +360,14 @@ function App() {
                                                              selectedOps={selectedRelAlgOps}/>
                         </div>
                     </div>
-                    {false&&(<div eventKey="subopPlan" title="SubOperatorPlan"
+                    <div eventKey="subopPlan" title="SubOperatorPlan"
                          style={{visibility: activeTab === "subopPlan" ? "visible" : "hidden", position: 'absolute'}}>
                         <div style={{height: '50vh', backgroundColor: "gray"}}>
                             <SubOpPlanViewerWithLoading input={subOpPlan} loading={queryPlanLoading}
                                                         error={queryPlanError} selectedOps={selectedSubOpOps}
                                                         onOperatorSelect={handleSubOpOpSelection}/>
                         </div>
-                    </div>)}
+                    </div>
                     <div eventKey="mlir" title="MLIR"
                          style={{
                              visibility: activeTab === "mlir" ? "visible" : "hidden",

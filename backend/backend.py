@@ -99,41 +99,43 @@ def run_sql_query(query_str, db):
 async def analyze(database: str = Body(...), query: str = Body(...), real_card: bool = Body(...)):
     if database not in ["tpch-1", "tpcds-1", "uni", "job"]:
         raise RuntimeError("Unknown Database")
-    with tempfile.NamedTemporaryFile(mode="w", delete=True) as f:
-        f.write(query)
-        query_file = f.name
-        f.flush()
-        with tempfile.TemporaryDirectory() as snapshotdir:
-            print(BINARY_DIR + "run-sql " + query_file + " " + DATA_ROOT + database)
-            output = subprocess.check_output([BINARY_DIR + "run-sql", query_file, DATA_ROOT + database],
-                                             universal_newlines=True, stderr=subprocess.STDOUT, timeout=20,
-                                             env={**os.environ,"LINGODB_SNAPSHOT_DIR": snapshotdir,
-                                                  "LINGODB_SNAPSHOT_PASSES": "true",
-                                                  "LINGODB_SNAPSHOT_LEVEL": "important",
-                                                  "LINGODB_EXECUTION_MODE": "NONE"})
-            result = subprocess.run(
-                f"bash {SCRIPT_DIR}/clean-snapshot.sh {BINARY_DIR} {snapshotdir}/important-snapshot-qopt.mlir {snapshotdir}/important-snapshot-qopt.mlir.alt",
-                universal_newlines=True, stderr=subprocess.STDOUT, shell=True)
-            print(result)
-            result = subprocess.run(
-                f"bash {SCRIPT_DIR}/clean-snapshot.sh {BINARY_DIR} {snapshotdir}/important-snapshot-subop-opt.mlir  {snapshotdir}/important-snapshot-subop-opt.mlir.alt",
-                universal_newlines=True, stderr=subprocess.STDOUT, shell=True)
-            print(os.listdir(snapshotdir))
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", delete=True) as f:
+            f.write(query)
+            query_file = f.name
+            f.flush()
+            with tempfile.TemporaryDirectory() as snapshotdir:
+                print(BINARY_DIR + "run-sql " + query_file + " " + DATA_ROOT + database)
+                output = subprocess.check_output([BINARY_DIR + "run-sql", query_file, DATA_ROOT + database],
+                                                 universal_newlines=True, stderr=subprocess.STDOUT, timeout=20,
+                                                 env={**os.environ,"LINGODB_SNAPSHOT_DIR": snapshotdir,
+                                                      "LINGODB_SNAPSHOT_PASSES": "true",
+                                                      "LINGODB_SNAPSHOT_LEVEL": "important",
+                                                      "LINGODB_EXECUTION_MODE": "NONE"})
+                result = subprocess.run(
+                    f"bash {SCRIPT_DIR}/clean-snapshot.sh {BINARY_DIR} {snapshotdir}/important-snapshot-qopt.mlir {snapshotdir}/important-snapshot-qopt.mlir.alt",
+                    universal_newlines=True, stderr=subprocess.STDOUT, shell=True)
+                print(result)
+                result = subprocess.run(
+                    f"bash {SCRIPT_DIR}/clean-snapshot.sh {BINARY_DIR} {snapshotdir}/important-snapshot-subop-opt.mlir  {snapshotdir}/important-snapshot-subop-opt.mlir.alt",
+                    universal_newlines=True, stderr=subprocess.STDOUT, shell=True)
+                print(os.listdir(snapshotdir))
 
-            relalg_plan = subprocess.check_output(
-                [BINARY_DIR + "mlir-to-json", snapshotdir + "/important-snapshot-qopt.mlir.alt"] + (
-                    [DATA_ROOT + database] if real_card else []),
-                universal_newlines=True, stderr=subprocess.STDOUT)
-            subop_plan = subprocess.check_output(
-                [BINARY_DIR + "mlir-subop-to-json", snapshotdir + "/important-snapshot-subop-opt.mlir.alt"],
-                universal_newlines=True)
-            analyzed_snapshots = subprocess.check_output(
-                [BINARY_DIR + "mlir-analyze-snapshots", snapshotdir + "/important-snapshot-info.json"],
-                universal_newlines=True)
-            print(os.listdir(snapshotdir))
-            return {"plan": json.loads(relalg_plan.split("\n")[0]), "subopplan": json.loads(subop_plan.split("\n")[0]),
-                    "mlir": json.loads(analyzed_snapshots)}
-
+                relalg_plan = subprocess.check_output(
+                    [BINARY_DIR + "mlir-to-json", snapshotdir + "/important-snapshot-qopt.mlir.alt"] + (
+                        [DATA_ROOT + database] if real_card else []),
+                    universal_newlines=True, stderr=subprocess.STDOUT)
+                subop_plan = subprocess.check_output(
+                    [BINARY_DIR + "mlir-subop-to-json", snapshotdir + "/important-snapshot-subop-opt.mlir.alt"],
+                    universal_newlines=True)
+                analyzed_snapshots = subprocess.check_output(
+                    [BINARY_DIR + "mlir-analyze-snapshots", snapshotdir + "/important-snapshot-info.json"],
+                    universal_newlines=True)
+                print(os.listdir(snapshotdir))
+                return {"plan": json.loads(relalg_plan.split("\n")[0]), "subopplan": json.loads(subop_plan.split("\n")[0]),
+                        "mlir": json.loads(analyzed_snapshots)}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Error during query analyze")
     return {}
 
 

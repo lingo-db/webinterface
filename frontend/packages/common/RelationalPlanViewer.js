@@ -121,11 +121,19 @@ const Operator = ({data}) => {
         const joinImpl = data.joinImpl === "hash" ? "HashJoin" : (data.joinImpl === "nested" ? "NestedLoopJoin" : "IndexNestedLoopJoin")
         return <OperatorContainer heading={`${joinSymbol(data.joinType)}\u2003 ${joinImpl}`}>
             <div><b>Comparisons:</b> {data.comparisons.map((comp) => <div><Expression data={comp}/></div>)}</div>
-            <div><b>Condition:</b> <Expression data={data.condition}/></div>
+            {data.condition&&(<div><b>Condition:</b> <Expression data={data.condition}/></div>)}
+        </OperatorContainer>
+    } else if (data.operator === "markJoin") {
+        const joinImpl = data.joinImpl === "hash" ? "HashJoin" : (data.joinImpl === "nested" ? "NestedLoopJoin" : "IndexNestedLoopJoin")
+        return <OperatorContainer heading={`${joinSymbol(data.joinType)}\u2003 ${joinImpl}`}>
+            <div><b>Comparisons:</b> {data.comparisons.map((comp) => <div><Expression data={comp}/></div>)}</div>
+            {data.condition && (<div><b>Condition:</b> <Expression data={data.condition}/></div>)}
+            <div><b>Marker:</b> <Expression data={data.markColumn}/></div>
+
         </OperatorContainer>
     } else if (data.operator === "map") {
         return <OperatorContainer heading={`\u2254\u2003 Map`}>
-            {data.computed.map((comp) => <div><Expression data={comp.computed}/>: <Expression data={comp.expression}/>
+        {data.computed.map((comp) => <div><Expression data={comp.computed}/>: <Expression data={comp.expression}/>
             </div>)}
         </OperatorContainer>
     } else if (data.operator == "window") {
