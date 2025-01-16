@@ -376,7 +376,7 @@ function App() {
                          }}>
                         <div style={{height: '50vh'}}>
                             {layers && <MLIRViewer height={window.innerHeight * 0.5} width={window.innerWidth}
-                                                   selectedOps={selectedRelAlgOps} layer={layers[1]}/>}
+                                                   selectedOps={selectedRelAlgOps} layer={layers[1]} onOpClick={(d)=>handleRelAlgOpSelection(d.id)}/>}
                         </div>
                     </div>
                     <div title="MLIR"
@@ -387,7 +387,7 @@ function App() {
                          }}>
                         <div style={{height: '50vh'}}>
                             {layers && <MLIRViewer height={window.innerHeight * 0.5} width={window.innerWidth}
-                                                   selectedOps={selectedSubOpOps} layer={layers[3]}/>}
+                                                   selectedOps={selectedSubOpOps} layer={layers[3]} onOpClick={(d)=>handleSubOpOpSelection(d.id)}/>}
                         </div>
                     </div>
                     <div title="MLIR"
@@ -398,7 +398,7 @@ function App() {
                          }}>
                         <div style={{height: '50vh'}}>
                             {layers && <MLIRViewer height={window.innerHeight * 0.5} width={window.innerWidth}
-                                                   selectedOps={selectedImpOps1} layer={layers[4]}/>}
+                                                   selectedOps={selectedImpOps1} layer={layers[4]}  onOpClick={(d)=>{}}/>}
                         </div>
                     </div>
                     <div title="MLIR"
@@ -409,7 +409,7 @@ function App() {
                          }}>
                         <div style={{height: '50vh'}}>
                             {layers && <MLIRViewer height={window.innerHeight * 0.5} width={window.innerWidth}
-                                                   selectedOps={selectedImpOps2} layer={layers[5]}/>}
+                                                   selectedOps={selectedImpOps2} layer={layers[5]}  onOpClick={(d)=>{}}/>}
                         </div>
                     </div>
                 </div>

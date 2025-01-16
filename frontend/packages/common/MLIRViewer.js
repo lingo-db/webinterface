@@ -27,6 +27,9 @@ const Render = ({data, selectionState, onOpClick}) => {
         return renderAttribute({data, selectionState, onOpClick})
     }else if (data.type==="type"){
         return renderType({data, selectionState, onOpClick})
+    }else if (data.type==="loc"){
+        //do not render loc information now
+        return undefined
     }
 }
 const renderOpName = ({data, selectionState, onOpClick}) => {
