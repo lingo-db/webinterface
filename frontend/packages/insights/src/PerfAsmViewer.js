@@ -30,7 +30,6 @@ const Func = ({data, selectionState, onInstrClick}) => {
 export const PerfAsmViewer = ({data, selectedOps, width, height, onInstrClick,selectedLLVMOps}) => {
     const scrollableDivRef = useRef(null);
     const getBackground = (data) => {
-        console.log(selectedLLVMOps, data.loc)
         if (data.loc && selectedLLVMOps.includes(data.loc)) {
             return "yellow"
         }

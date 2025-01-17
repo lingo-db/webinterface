@@ -25,9 +25,9 @@ const Render = ({data, selectionState, onOpClick}) => {
         return renderOpName({data, selectionState, onOpClick})
     } else if (data.type === "attribute") {
         return renderAttribute({data, selectionState, onOpClick})
-    }else if (data.type==="type"){
+    } else if (data.type === "type") {
         return renderType({data, selectionState, onOpClick})
-    }else if (data.type==="loc"){
+    } else if (data.type === "loc") {
         //do not render loc information now
         return undefined
     }
@@ -84,20 +84,20 @@ const renderType = ({data, selectionState, onOpClick}) => {
 }
 
 const renderBlock = ({data, selectionState, onOpClick}) => {
-    let children=data.children
-    if (data.eCB){
-        children=children.slice(1,-1)
-    }else{
-        children=children.slice(1)
+    let children = data.children
+    if (data.eCB) {
+        children = children.slice(1, -1)
+    } else {
+        children = children.slice(1)
     }
     return (<div style={{display: "inline"}}>
-        {data.sCB?"{":<Render data={data.children[0]} selectionState={selectionState} onOpClick={onOpClick}/>}
+        {data.sCB ? "{" : <Render data={data.children[0]} selectionState={selectionState} onOpClick={onOpClick}/>}
         <div style={{paddingLeft: "10px"}}>
             {children.map((child, index) => {
                 return (<Render data={child} selectionState={selectionState} onOpClick={onOpClick}></Render>)
             })}
         </div>
-        {data.eCB?"}":""}
+        {data.eCB ? "}" : ""}
     </div>)
 }
 
@@ -112,8 +112,9 @@ export const MLIRViewer = ({layer, selectedOps, width, height, onOpClick}) => {
     }
     useEffect(() => {
         if (selectedOps.length > 0 && scrollableDivRef) {
-            let currentElement=document.getElementById(selectedOps[0])
-            currentElement.scrollIntoView({behavior: "smooth", block: "center"});
+            let currentElement = document.getElementById(selectedOps[0])
+            if (currentElement)
+                currentElement.scrollIntoView({behavior: "smooth", block: "center"});
         }
     }, [selectedOps]);
     return (<div ref={scrollableDivRef} style={{maxWidth: width, maxHeight: height, overflow: "auto"}}>
