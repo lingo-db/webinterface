@@ -237,7 +237,7 @@ export const RelationalPlanViewer = ({height, width, input, onOperatorSelect, se
 
 
 
-    return(nodes&&edges&& <PlanViewer nested={false} height={height} width={width} nodes={nodes} edges={edges} onOperatorSelect={onOperatorSelect} selectedOps={selectedOps} renderNode={(node, x, y,rerender)=>(<div style={{
+    return(nodes&&edges&& <PlanViewer nested={false} height={height} width={width} rankSep={20} nodeSep={30} nodes={nodes} edges={edges} onOperatorSelect={onOperatorSelect} selectedOps={selectedOps} renderNode={(node, x, y,rerender)=>(<div style={{
         transform: `translate(${x}px, ${y}px)`,
         position: "absolute",
         border: "1px solid black",

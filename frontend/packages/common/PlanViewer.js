@@ -10,7 +10,9 @@ export const PlanViewer = memo(({
                                     renderNode,
                                     renderEdge,
                                     onRendered,
-                                    drawExtra
+                                    drawExtra,
+                                    nodeSep,
+                                    rankSep,
                                 }) => {
 
     //dagre.layout(g);
@@ -56,10 +58,10 @@ export const PlanViewer = memo(({
 
     const render = (nodes, edges) => {
         const g = new dagre.graphlib.Graph().setGraph({
-            nodesep: 30,
-            ranksep: 20,
+            nodesep: nodeSep,
+            ranksep: rankSep,
             marginy: nested ? 20 : 0,
-            marginx: nested ? 10 : 0
+            marginx: nested ? 10 : 0,
         });
         nodes.forEach((node) => {
             const element = document.getElementById(`plan-${node.ref}`)
@@ -70,7 +72,7 @@ export const PlanViewer = memo(({
         edges.forEach((edge) => {
             g.setEdge(edge[0], edge[1], edge[2])
         })
-        dagre.layout(g);
+        dagre.layout(g)
         let newNodesLayout = {}
         let newNodesPos = {}
         g.nodes().forEach((nodeId) => {

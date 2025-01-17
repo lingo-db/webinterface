@@ -33,6 +33,8 @@ const Expression = ({data}) => {
     if (data.type === "expression_leaf") {
         if (data.leaf_type === "column") {
             return <div style={{display: "inline"}}>{data.displayName}</div>
+        }else if (data.leaf_type === "external_column") {
+            return <div style={{display: "inline", color:"darkgreen",border:"1px solid green"}}>{data.displayName}</div>
         } else if (data.leaf_type === "constant") {
             return <div style={{display: "inline"}}>{data.value}</div>
         } else if (data.leaf_type === "unknown") {
@@ -96,37 +98,39 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
         let numInputs = data.inputs.length
         let inputs = []
         for (let i = 0; i < numInputs; i++) {
-            inputs.push(<div style={{
-                minWidth: 100,
-                fontWeight: 700,
+            inputs.push(<div title={data.inputs[i].type} style={{
+                width: 40,
+                fontWeight: 800,
                 fontSize: "medium",
                 textAlign: "center",
-                borderRadius: 5,
-                border: "1px solid black",
+                borderLeft: "1px solid black",
+                borderRight: "1px solid black",
                 display: "inline-block"
-            }}>I{i}
+            }}>{"\u27dc"}
             </div>)
         }
         let results = []
         for (let i = 0; i < numResults; i++) {
             results.push(<div style={{
-                minWidth: 100,
-                fontWeight: 700,
+                width: 40,
+                fontWeight: 800,
                 fontSize: "medium",
                 textAlign: "center",
-                borderRadius: 5,
-                border: "1px solid black",
+                borderLeft: "1px solid black",
+                borderRight: "1px solid black",
                 display: "inline-block"
-            }}>R{i}
+            }}>{"\u22b8"}
             </div>)
         }
         data.inputs.forEach(input => {
-            nodes.push({
-                ref: computeRef(input.argument),
-                type: "arg",
-                consuming: [],
-                accesses: []
-            })
+            if(input.used) {
+                nodes.push({
+                    ref: computeRef(input.argument),
+                    type: "arg",
+                    consuming: [],
+                    accesses: []
+                })
+            }
         })
 
 
@@ -164,7 +168,7 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
                 <div>
                     {inputs}
                 </div>
-                <PlanViewer nested={true} height={1000} width={700} nodes={nodes} edges={edges}
+                <PlanViewer nested={true} height={1000} width={700} rankSep={20} nodeSep={30} nodes={nodes} edges={edges}
                             renderNode={(node, x, y) => (
                                 <RenderedNode x={x} y={y} data={node} onOperatorSelect={onOperatorSelect}
                                               selectedOps={selectedOps}/>)}
@@ -172,32 +176,35 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
                                 let points = edge.points.map((point) => `${point.x},${point.y}`).join(" ");
 
                                 return <g>
+                                    {edge.type==="access"&&
                                     <polyline key={`edge,${edge.id.v},${edge.id.w}`} points={points} fill={"none"}
-                                              stroke={"black"} strokeWidth={1} strokeLinecap={"square"}
-                                              strokeOpacity={0.5}></polyline>
+                                              stroke={"darkgreen"} strokeWidth={2} strokeLinecap={"square"}
+                                              strokeOpacity={0.7}></polyline>}
+                                    {edge.type==="stream"&&
+                                    <polyline key={`edge,${edge.id.v},${edge.id.w}`} points={points} fill={"none"}
+                                              stroke={"white"} strokeWidth={20}
+                                              strokeLinecap={"square"} strokeOpacity={1}></polyline>}
                                     <text x={edge.points[1].x + 20} y={edge.points[1].y} stroke={"black"}
                                           strokeWidth={"0.2"} fontSize={10}>{edge.label}</text>
                                 </g>
 
                             }} drawExtra={(nodesPos, requiredHeight) => {
                     if (nodesPos) {
-                        return <g> {data.inputs.map(input => {
+                        return <g> {data.inputs.filter(input=>input.used).map(input => {
                             let n = nodesPos[computeRef(input.argument)]
 
-                            return <line x1={n.computedX} y1={n.computedY} x2={input.argument.argnr * 100 + 50} y2="0"
+                            return <line x1={n.computedX} y1={n.computedY} x2={input.argument.argnr * 40 + 20} y2="0"
                                          fill={"none"}
-                                         stroke={"black"} strokeWidth={1} strokeLinecap={"square"}
-                                         strokeDasharray={"2 2"}
-                                         strokeOpacity={0.5}></line>
+                                         stroke={"darkgreen"} strokeWidth={2} strokeLinecap={"square"}
+                                         strokeOpacity={0.7}></line>
                         })}
 
                             {data.results.map((result, i) => {
                                 let n = nodesPos[computeRef(result)]
-                                return <line x1={n.computedX} y1={n.computedY} x2={i * 100 + 50} y2={requiredHeight}
+                                return <line x1={n.computedX} y1={n.computedY} x2={i * 40 + 20} y2={requiredHeight}
                                              fill={"none"}
-                                             stroke={"black"} strokeWidth={1} strokeLinecap={"square"}
-                                             strokeDasharray={"2 2"}
-                                             strokeOpacity={0.5}></line>
+                                             stroke={"brown"} strokeWidth={2} strokeLinecap={"square"}
+                                             strokeOpacity={0.7}></line>
                             })}
 
                         </g>
@@ -274,8 +281,8 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
                         edges.push([computeRef(input.input), planNode.ref, {
                             type: "requiredInputs",
                             meta: {
-                                off1: 70 + 100 * input.input.resnr,
-                                off2: 70 + 100 * input.argument.argnr
+                                off1: 40 + 40 * input.input.resnr,
+                                off2: 40 + 40 * input.argument.argnr
                             }
                         }])
 
@@ -340,20 +347,39 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
                     whitSpace: "pre-line",
                     flex: 1
                 }}>
-                    <PlanViewer nested={true} height={1000} width={700} nodes={nodes} edges={edges}
+                    <PlanViewer nested={true} height={1000} width={700} rankSep={50} nodeSep={50} nodes={nodes} edges={edges}
                                 renderNode={(node, x, y) => (
                                     <RenderedNode x={x} y={y} data={node} onOperatorSelect={onOperatorSelect}
                                                   selectedOps={selectedOps}/>)}
-                                renderEdge={(edge) => {
-                                    let points = edge.points.map((point) => `${point.x},${point.y}`).join(" ");
+                                renderEdge={(edge,nodesPos) => {
+                                    if (edge.type === "requiredInputs") {
+                                        let edgePoints = edge.points.map((point) => {
+                                            return {x: point.x, y: point.y}
+                                        })
 
-                                    return <g>
-                                        <polyline key={`edge,${edge.id.v},${edge.id.w}`} points={points} fill={"none"}
-                                                  stroke={"white"} strokeWidth={1} strokeLinecap={"square"}
-                                                  strokeOpacity={0.5}></polyline>
-                                        <text x={edge.points[1].x + 20} y={edge.points[1].y} stroke={"black"}
-                                              strokeWidth={"0.2"} fontSize={10}>{edge.label}</text>
-                                    </g>
+                                        //edgePoints[0].x = nodesPos[edge.id.v].renderX + edge.meta.off1
+                                        edgePoints[edgePoints.length - 1].x = nodesPos[edge.id.w].renderX + edge.meta.off2
+                                        edgePoints[edgePoints.length - 1].y = nodesPos[edge.id.w].renderY+2
+                                        let points = edgePoints.map((point) => `${point.x},${point.y}`).join(" ");
+
+                                        return <g>
+                                            <polyline key={`edge,${edge.id.v},${edge.id.w}`} points={points}
+                                                      fill={"none"}
+                                                      stroke={"darkgreen"} strokeWidth={2}
+                                                      strokeLinecap={"square"} strokeOpacity={0.7} ></polyline>
+                                        </g>
+                                    }else {
+                                        let points = edge.points.map((point) => `${point.x},${point.y}`).join(" ");
+
+                                        return <g>
+                                            <polyline key={`edge,${edge.id.v},${edge.id.w}`} points={points}
+                                                      fill={"none"}
+                                                      stroke={"white"} strokeWidth={1} strokeLinecap={"square"}
+                                                      strokeOpacity={0.5}></polyline>
+                                            <text x={edge.points[1].x + 20} y={edge.points[1].y} stroke={"black"}
+                                                  strokeWidth={"0.2"} fontSize={10}>{edge.label}</text>
+                                        </g>
+                                    }
 
                                 }} drawExtra={(nodesPos, requiredHeight) => {
                         if (nodesPos) {
@@ -490,8 +516,8 @@ export const SubOpPlanViewer = ({height, width, input, onOperatorSelect, selecte
                     currEdges.push([computeRef(input.input), planNode.ref, {
                         type: "requiredInputs",
                         meta: {
-                            off1: 70 + 100 * input.input.resnr,
-                            off2: 70 + 100 * input.argument.argnr
+                            off1: 40 + 40 * input.input.resnr,
+                            off2: 40 + 40 * input.argument.argnr
                         }
                     }])
 
@@ -510,7 +536,7 @@ export const SubOpPlanViewer = ({height, width, input, onOperatorSelect, selecte
     }, [input])
 
 
-    return (nodes && edges && <PlanViewer nested={false} height={height} width={width} nodes={nodes} edges={edges}
+    return (nodes && edges && <PlanViewer nested={false} height={height} width={width} rankSep={50} nodeSep={50} nodes={nodes} edges={edges}
                                           renderNode={(node, x, y) => (
                                               <RenderedNode x={x} y={y} data={node} onOperatorSelect={onOperatorSelect}
                                                             selectedOps={selectedOps}/>)}
@@ -522,29 +548,18 @@ export const SubOpPlanViewer = ({height, width, input, onOperatorSelect, selecte
                                               if (edge.type === "requiredInputs") {
                                                   edgePoints[0].x = nodesPos[edge.id.v].renderX + edge.meta.off1
                                                   edgePoints[edgePoints.length - 1].x = nodesPos[edge.id.w].renderX + edge.meta.off2
+                                                  edgePoints[edgePoints.length - 1].y = nodesPos[edge.id.w].renderY+2
                                                   let points = edgePoints.map((point) => `${point.x},${point.y}`).join(" ");
 
                                                   return <g>
                                                       <polyline key={`edge,${edge.id.v},${edge.id.w}`} points={points}
                                                                 fill={"none"}
-                                                                stroke={"black"} strokeWidth={1}
-                                                                strokeLinecap={"square"}
-                                                                strokeOpacity={0.5}></polyline>
+                                                                stroke={"darkgreen"} strokeWidth={2}
+                                                                strokeLinecap={"square"} strokeOpacity={0.7} ></polyline>
                                                   </g>
                                               } else if (edge.type === "executionOrder") {
-                                                  let points = edgePoints.map((point) => `${point.x},${point.y}`).join(" ");
-
-                                                  return <g>
-                                                      <polyline key={`edge,${edge.id.v},${edge.id.w}`} points={points}
-                                                                fill={"none"}
-                                                                stroke={"gray"} strokeWidth={1} strokeLinecap={"square"}
-                                                                strokeDasharray={"4"}
-                                                                strokeOpacity={0.5}></polyline>
-                                                      <text x={edge.points[1].x + 20} y={edge.points[1].y}
-                                                            stroke={"black"}
-                                                            strokeWidth={"0.2"} fontSize={10}>Order
-                                                      </text>
-                                                  </g>
+                                                  //do not render edges inserted to get execution order right
+                                                  return undefined
                                               }
 
                                           }}/>)
