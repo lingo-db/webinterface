@@ -49,15 +49,18 @@ export const PlanViewer = memo(({
         setScale(newScale)
     }
     const [offsetString, setOffsetString] = useState("translate(0px, 0px)");
+    const [svgOffsetString, setSvgOffsetString] = useState("translate(0px, 0px)");
     useEffect(() => {
         setOffsetString(`translate(${xOffset}px, ${yOffset}px) scale(${scale})`);
+        setSvgOffsetString(`translate(${xOffset}px, ${yOffset}px) scale(${scale})`);
     }, [xOffset, yOffset, scale]);
 
     const [nodesLayout, setNodesLayout] = useState({})
     const [nodesPos, setNodesPos] = useState(undefined)
 
     const render = (nodes, edges) => {
-        const g = new dagre.graphlib.Graph().setGraph({
+        let uniqueIdCntr=0
+        const g = new dagre.graphlib.Graph({multigraph:true}).setGraph({
             nodesep: nodeSep,
             ranksep: rankSep,
             marginy: nested ? 20 : 0,
@@ -70,55 +73,31 @@ export const PlanViewer = memo(({
             g.setNode(node.ref, {width: nodeWidth, height: nodeHeight});
         })
         edges.forEach((edge) => {
-            g.setEdge(edge[0], edge[1], edge[2])
+            g.setEdge(edge[0], edge[1], edge[2], uniqueIdCntr)
+            uniqueIdCntr+=1
         })
         dagre.layout(g)
-        let newNodesLayout = {}
-        let newNodesPos = {}
-        g.nodes().forEach((nodeId) => {
-            let node = g.node(nodeId);
-            if (node === undefined) {
-                console.log("unknown node", nodeId, JSON.stringify(nodeId))
-            }
-            newNodesLayout[nodeId] = {
-                x: node.x - node.width / 2,
-                y: node.y - node.height / 2,
-                width: node.width,
-                height: node.height
-            }
-            newNodesPos[nodeId] = {
-                computedX: node.x,
-                computedY: node.y,
-                renderX: node.x - node.width / 2,
-                renderY: node.y - node.height / 2,
-            }
-        })
-        setNodesPos(newNodesPos)
-        let maxX = g.nodes().reduce((maxX, nodeId) => {
-            return Math.max(maxX, newNodesLayout[nodeId].x)
-        }, 0)
-        let maxY = g.nodes().reduce((maxY, nodeId) => {
-            return Math.max(maxY, newNodesLayout[nodeId].y)
-        }, 0)
-        setNodesLayout(newNodesLayout)
-        let newEdges = []
-        g.edges().forEach((edgeId) => {
-            let edge = g.edge(edgeId);
-            newEdges.push({
-                id: edgeId,
-                points: edge.points,
-                label: edge.label,
-                cardinality: edge.cardinality,
-                estimatedCardinality: edge.estimatedCardinality,
-                type: edge.type,
-                meta: edge.meta
-            })
-        })
-        setInternalEdges(newEdges)
-        const requiredWidth = g.nodes().reduce((maxWidth, nodeId) => {
+
+        let requiredWidth = g.nodes().reduce((maxWidth, nodeId) => {
             let node = g.node(nodeId);
             return Math.max(maxWidth, node.x + node.width / 2);
-        }, 0) + (nested ? 10 : 0);
+        }, 0)
+        requiredWidth=g.edges().reduce((maxWidth,edgeId) => {
+            let edge = g.edge(edgeId);
+            return edge.points.reduce((maxWidth, p)=>{
+                return Math.max(maxWidth, p.x+2)
+            }, maxWidth)
+        },requiredWidth)
+        requiredWidth = requiredWidth + (nested ? 10 : 0);
+
+        let minPoint=g.edges().reduce((minPoint,edgeId) => {
+            let edge = g.edge(edgeId);
+            return edge.points.reduce((minPoint, p)=>{
+                return Math.min(minPoint, p.x)
+            }, minPoint)
+        },0)
+        minPoint-=2
+        requiredWidth-=minPoint
         const requiredHeight = g.nodes().reduce((maxHeight, nodeId) => {
             let node = g.node(nodeId);
             return Math.max(maxHeight, node.y + node.height / 2);
@@ -131,9 +110,48 @@ export const PlanViewer = memo(({
         setYOffset(-(requiredHeight - requiredHeight * newScale) / 2)
 
 
+        let newNodesLayout = {}
+        let newNodesPos = {}
+        g.nodes().forEach((nodeId) => {
+            let node = g.node(nodeId);
+            if (node === undefined) {
+                console.log("unknown node", nodeId, JSON.stringify(nodeId))
+            }
+            newNodesLayout[nodeId] = {
+                x: node.x - node.width / 2-minPoint,
+                y: node.y - node.height / 2,
+                width: node.width,
+                height: node.height
+            }
+            newNodesPos[nodeId] = {
+                computedX: node.x+minPoint,
+                computedY: node.y,
+                renderX: node.x - node.width / 2-minPoint,
+                renderY: node.y - node.height / 2,
+                width: node.width,
+                height: node.height
+            }
+        })
+        setNodesPos(newNodesPos)
+        setNodesLayout(newNodesLayout)
+        let newEdges = []
+        g.edges().forEach((edgeId) => {
+            let edge = g.edge(edgeId);
+            newEdges.push({
+                id: edgeId,
+                points: edge.points.map(p=>{return {x:p.x-minPoint, y:p.y}}),
+                label: edge.label,
+                cardinality: edge.cardinality,
+                estimatedCardinality: edge.estimatedCardinality,
+                type: edge.type,
+                meta: edge.meta
+            })
+        })
+        setInternalEdges(newEdges)
+
     }
     useEffect(() => {
-        isMounted.current=true
+        isMounted.current = true
         render(nodes, edges)
         let timer1 = setTimeout(() => {
             if (isMounted.current) render(nodes, edges)
@@ -155,7 +173,9 @@ export const PlanViewer = memo(({
                 <div style={{
                     backgroundColor: "lightgray",
                     position: "relative",
-                }} onClick={(e)=>{e.stopPropagation()}}>
+                }} onClick={(e) => {
+                    e.stopPropagation()
+                }}>
                     <svg style={{
                         backgroundColor: "lightgray",
                         userSelect: "none",
