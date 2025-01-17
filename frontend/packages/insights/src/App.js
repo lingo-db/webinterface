@@ -5,7 +5,14 @@ import {Button, Col, Container, Form, Navbar, Row, Tab, Tabs} from 'react-bootst
 import {MLIRViewer} from "@lingodb/common/MLIRViewer";
 import {RelationalPlanViewer} from "@lingodb/common/RelationalPlanViewer";
 import {TraceViewer} from "@lingodb/common/TraceViewer";
-import {analyzeLayers, getBaseReference, goDown, goUp} from "@lingodb/common/MLIRLayerAnalysis";
+import {
+    analyzeLayers,
+    collectChildren, collectChildrenWithData,
+    getBaseReference,
+    goDown,
+    goDownDirect,
+    goUp, goUpDirect, opSameExceptLoc, opSameExceptLocAndChildren
+} from "@lingodb/common/MLIRLayerAnalysis";
 import {SubOpPlanViewer} from "@lingodb/common/SubOpPlanViewer";
 import {PerfSymbolTable} from "./PerfSymbolTable";
 import {PerfAsmViewer} from "./PerfAsmViewer";
@@ -31,7 +38,8 @@ const App = () => {
     const [rightDiffIndex, setRightDiffIndex] = useState(null);
     const [leftDiffData, setLeftDiffData] = useState(null);
     const [rightDiffData, setRightDiffData] = useState(null);
-
+    const [leftDiffBackground, setLeftDiffBackground] = useState(null);
+    const [rightDiffBackground, setRightDiffBackground] = useState(null);
 
     //aggregated perf data (file,symbol) -> percentage
     const [perfSymbols, setPerfSymbols] = useState(null);
@@ -119,6 +127,78 @@ const App = () => {
         ,
         [data]
     )
+    const createDiff = () => {
+        let leftChildren=[]
+        let rightChildren=[]
+        let leftBackground={}
+        let rightBackground={}
+        collectChildrenWithData(data.layers[leftDiffIndex].parsed,leftChildren)
+        collectChildrenWithData(data.layers[rightDiffIndex].parsed,rightChildren)
+        let leftOps={}
+        let rightOps={}
+        leftChildren.forEach((op)=>{
+            leftOps[op.id]=op
+        })
+        rightChildren.forEach((op)=>{
+            rightOps[op.id]=op
+        })
+        let leftDiffBaseRef = getBaseReference(data.layers[leftDiffIndex].passInfo.file)
+        let rightDiffBaseRef = getBaseReference(data.layers[rightDiffIndex].passInfo.file)
+
+        let valueMapping=[]
+
+        leftChildren.forEach((op)=>{
+            if(op&&op.id) {
+                const related = goDownDirect(op.id, rightDiffBaseRef, layerInfo)
+                console.log(op.id, "related", related)
+                if(related.length===0){
+                    leftBackground[op.id]="lightgray"
+                }
+                if(related.length===1){
+                    const same=opSameExceptLocAndChildren(leftOps[op.id],rightOps[related[0]],valueMapping,true)
+                    console.log("compare", leftOps[op.id], rightOps[related[0]],same)
+                    if(!same) {
+                        leftBackground[op.id] = "#ffebba"
+                    }else{
+                        let leftResultGroup=leftOps[op.id].children[0]
+                        let rightResultGroup=rightOps[related[0]].children[0]
+                        if(leftResultGroup.type==="resultGroup"&&rightResultGroup==="resultGroup") {
+                            valueMapping[leftResultGroup.value] = rightResultGroup.value
+                        }
+                    }
+                }
+                if(related.length>1){
+                    leftBackground[op.id]="#ffbaf8"
+                }
+            }
+        })
+        rightChildren.forEach((op)=>{
+            if(op&&op.id) {
+                const related = goUpDirect(op.id, leftDiffBaseRef, layerInfo)
+                console.log(op.id, "related", related)
+                if(related.length===0){
+                    rightBackground[op.id]="lightgray"
+                }
+                if(related.length===1){
+                    const same=opSameExceptLocAndChildren(leftOps[related[0]],rightOps[op.id],valueMapping,true)
+                    console.log("compare", rightOps[op.id], leftOps[related[0]],same)
+                    if(!same) {
+                        rightBackground[op.id] = "#ffebba"
+                    }else{
+                        rightBackground[op.id] = "white"
+                    }
+                }
+                if(related.length>1){
+                    rightBackground[op.id]="#ffbaf8"
+                }
+            }
+        })
+        setLeftDiffBackground(leftBackground)
+        setRightDiffBackground(rightBackground)
+        console.log("left",leftBackground)
+    }
+
+
     useEffect(() => {
         if (data && leftDiffIndex) {
             setLeftDiffData(data.layers[leftDiffIndex])
@@ -398,6 +478,8 @@ const App = () => {
             </div>
             <div style={{
                 visibility: viewMode === "diff" ? "visible" : "hidden",
+                position: "absolute",
+                top: 0,
             }}>
                 {leftDiffData && rightDiffData && viewMode==="diff"&&<Container fluid className="pt-5 mt-3">
 
@@ -407,11 +489,13 @@ const App = () => {
                                 <Button onClick={decAndSetLayer(leftDiffIndex, setLeftDiffIndex)}>{"<"}</Button>
                                 <Button onClick={() => setLeftDiffIndex(rightDiffIndex)}>Take Right</Button>
                                 <Button onClick={incAndSetLayer(leftDiffIndex, setLeftDiffIndex)}>{">"}</Button>
+                                <Button onClick={() => createDiff()}>Close</Button>
                                 After {leftDiffData.passInfo.argument} ({leftDiffData.passInfo.file})</Navbar>
                             <MLIRViewer height={(window.innerHeight - 140)}
                                         width={(window.innerWidth - 100) / 2}
                                         layer={leftDiffData} selectedOps={selectedLeftOps}
-                                        onOpClick={(d) => {setSelectedOp(d.id);setSelectedLayer(rightDiffIndex)}}></MLIRViewer>
+                                        backgroundMap={leftDiffBackground}
+                                        onOpClick={(d) => {setSelectedOp(d.id);setSelectedLayer(leftDiffIndex)}}></MLIRViewer>
                         </Col>
                         <Col className="p-3" style={{backgroundColor: '#f8f9fa'}}>
                             <Navbar>
@@ -422,6 +506,7 @@ const App = () => {
                             <MLIRViewer height={(window.innerHeight - 140)}
                                         width={(window.innerWidth - 100) / 2}
                                         layer={rightDiffData} selectedOps={selectedRightOps}
+                                        backgroundMap={rightDiffBackground}
                                         onOpClick={(d) => {setSelectedOp(d.id);setSelectedLayer(rightDiffIndex)}}></MLIRViewer>
                         </Col>
                     </Row>

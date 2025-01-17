@@ -102,11 +102,14 @@ const renderBlock = ({data, selectionState, onOpClick}) => {
 }
 
 
-export const MLIRViewer = ({layer, selectedOps, width, height, onOpClick}) => {
+export const MLIRViewer = ({layer, selectedOps, width, height, onOpClick, backgroundMap}) => {
     const scrollableDivRef = useRef(null);
     const getBackground = (data) => {
         if (data.type === "op" && selectedOps.includes(data.id)) {
             return "yellow"
+        }
+        if(backgroundMap&&backgroundMap[data.id]){
+            return backgroundMap[data.id]
         }
         return "white"
     }
