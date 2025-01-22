@@ -56,7 +56,7 @@ const Expression = ({data}) => {
         </div>
     }
 }
-const createNodesAndEdges = (ops) => {
+const createNodesAndEdges = (ops, innerEdges) => {
     let currNodes = [];
     let currEdges = [];
     let extraEdges = []
@@ -80,9 +80,15 @@ const createNodesAndEdges = (ops) => {
                 return e
             }
         })
+        if(innerEdges){
+            innerEdges.forEach((e)=>{
+                console.log(e)
+                tmpEdges.push({type: e.type, input: e.input, output:e.output})
+            })
+        }
         tmpEdges.forEach((e) => {
 
-            if (e.input.type === "node" && e.input.type === "node") {
+            if (e.input.type === "node" && e.output.type === "node") {
                 currEdges.push([e.input.ref, e.output.ref, {type: e.type, meta: e}])
             } else {
                 extraEdges.push(e)
@@ -132,7 +138,7 @@ const renderEdges = (edge, nodesPos) => {
     }
 
 }
-const renderExtraEdge = (edge, nodePos) => {
+const renderExtraEdge = (edge, nodePos, requiredHeight) => {
     if (nodePos) {
         let inputX = 0;
         let inputY = 0;
@@ -145,6 +151,14 @@ const renderExtraEdge = (edge, nodePos) => {
         if (edge.output.type === "node") {
             outputX = nodePos[edge.output.ref].renderX + 40 + 40 * edge.output.argnr
             outputY = nodePos[edge.output.ref].renderY
+        }
+        if(edge.input.type ==="node"){
+            inputX = nodePos[edge.input.ref].renderX + nodePos[edge.input.ref].width/2
+            inputY = nodePos[edge.input.ref].renderY+nodePos[edge.input.ref].height
+        }
+        if (edge.output.type==="parentResult"){
+            outputX = edge.input.resnr * 40 + 20
+            outputY = requiredHeight
         }
         if (edge.type === "requiredInput") {
             return <line x1={inputX} y1={inputY} x2={outputX} y2={outputY}
@@ -159,6 +173,12 @@ const renderExtraEdge = (edge, nodePos) => {
                          stroke={"darkgreen"} strokeWidth={2} strokeLinecap={"square"}
                          strokeOpacity={0.7}></line>
 
+        }else if(edge.type === "resultEdge"){
+            console.log(edge.input)
+            return <line x1={inputX} y1={inputY} x2={outputX} y2={outputY}
+                         fill={"none"}
+                         stroke={"brown"} strokeWidth={2} strokeLinecap={"square"}
+                         strokeOpacity={0.7}></line>
         }
     }
 }
@@ -216,7 +236,7 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
         }
         let results = []
         for (let i = 0; i < numResults; i++) {
-            results.push(<div style={{
+            results.push(<div title={data.results[i].type} style={{
                 width: 40,
                 fontWeight: 800,
                 fontSize: "medium",
@@ -227,7 +247,7 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
             }}>{"\u22b8"}
             </div>)
         }
-        let [nodes, edges, extraEdges] = createNodesAndEdges(data.subops)
+        let [nodes, edges, extraEdges] = createNodesAndEdges(data.subops, data.innerEdges)
 
 
 
@@ -260,7 +280,7 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
                                               selectedOps={selectedOps}/>)}
                             renderEdge={renderEdges}
                             drawExtra={(nodesPos, requiredHeight) => {
-                                return extraEdges.map(e => renderExtraEdge(e, nodesPos))
+                                return extraEdges.map(e => renderExtraEdge(e, nodesPos, requiredHeight))
                             }}
                 />
                 <div>
@@ -321,7 +341,7 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
                 </div>)
             }
 
-            let [nodes, edges, extraEdges] = createNodesAndEdges(data.subops)
+            let [nodes, edges, extraEdges] = createNodesAndEdges(data.subops,data.innerEdges)
 
 
             return <div style={{display: "flex"}}>
@@ -353,7 +373,7 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
                                                   selectedOps={selectedOps}/>)}
                                 renderEdge={renderEdges}
                                 drawExtra={(nodesPos, requiredHeight) => {
-                                    return extraEdges.map(e => renderExtraEdge(e, nodesPos))
+                                    return extraEdges.map(e => renderExtraEdge(e, nodesPos, requiredHeight))
                                 }}/>
                 </div>
             </div>
