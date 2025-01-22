@@ -10,24 +10,18 @@ import {
     Form,
     Nav,
     Navbar,
-    Row,
-    Tab,
-    Tabs
+    Row
 } from 'react-bootstrap';
 import {MLIRViewer} from "@lingodb/common/MLIRViewer";
 import {RelationalPlanViewer} from "@lingodb/common/RelationalPlanViewer";
-import {TraceViewer} from "@lingodb/common/TraceViewer";
 import {
     analyzeLayers,
-    collectChildren, collectChildrenWithData,
+    collectChildrenWithData,
     getBaseReference,
     goDown,
     goDownDirect,
-    goUp, goUpDirect, opSameExceptLoc, opSameExceptLocAndChildren
+    goUp, goUpDirect, opSameExceptLocAndChildren
 } from "@lingodb/common/MLIRLayerAnalysis";
-import {SubOpPlanViewer} from "@lingodb/common/SubOpPlanViewer";
-import {PerfSymbolTable} from "./PerfSymbolTable";
-import {PerfAsmViewer} from "./PerfAsmViewer";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
 export const DebuggingView = ({data, onClose}) => {
@@ -166,7 +160,7 @@ export const DebuggingView = ({data, onClose}) => {
                 }
             })
         }
-    }, [selectedOp, selectedLayer, leftDiffIndex, rightDiffIndex])
+    }, [data,layerInfo, selectedOp, selectedLayer, leftDiffIndex, rightDiffIndex])
 
     useEffect(() => {
         if (selectedOp && selectedLayer) {
@@ -182,7 +176,7 @@ export const DebuggingView = ({data, onClose}) => {
                 }
             })
         }
-    }, [selectedOp, selectedLayer])
+    }, [data, layerInfo,relalgMLIRData, selectedOp, selectedLayer])
     const selectError = (index) => {
         console.log("select", index)
         let file= data.errors[index][0][0]
@@ -243,8 +237,7 @@ export const DebuggingView = ({data, onClose}) => {
                         }
                     </DropdownButton>
                     <DropdownButton as={ButtonGroup} id="dropdown-basic-button" title={"File"} onSelect={selectFile}>
-                        {data.layers.map((l, index) => {
-                            if(l.index>0)
+                        {data.layers.filter((l)=>l.index>0).map((l, index) => {
                             return <Dropdown.Item eventKey={l.index}>{l.passInfo.file}</Dropdown.Item>
                         })
                         }

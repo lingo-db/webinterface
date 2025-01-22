@@ -6,11 +6,11 @@ import {RelationalPlanViewer} from "@lingodb/common/RelationalPlanViewer";
 import {TraceViewer} from "@lingodb/common/TraceViewer";
 import {
     analyzeLayers,
-    collectChildren, collectChildrenWithData,
+    collectChildrenWithData,
     getBaseReference,
     goDown,
     goDownDirect,
-    goUp, goUpDirect, opSameExceptLoc, opSameExceptLocAndChildren
+    goUp, goUpDirect, opSameExceptLocAndChildren
 } from "@lingodb/common/MLIRLayerAnalysis";
 import {SubOpPlanViewer} from "@lingodb/common/SubOpPlanViewer";
 import {PerfSymbolTable} from "./PerfSymbolTable";
@@ -208,7 +208,7 @@ export const ProfilingView = ({data, onClose}) => {
                 }
             })
         }
-    }, [selectedOp, selectedLayer])
+    }, [data, layerInfo,relalgMLIRData,subopMLIRData,imperativeMLIRData,llvmMLIRData, selectedOp, selectedLayer])
     useEffect(() => {
         if (selectedOp && selectedLayer) {
             const displayedLayers = [{idx: leftDiffIndex, fn: setSelectedLeftOps}, {
@@ -226,7 +226,7 @@ export const ProfilingView = ({data, onClose}) => {
                 }
             })
         }
-    }, [selectedOp, selectedLayer, leftDiffIndex, rightDiffIndex])
+    }, [data, layerInfo, selectedOp, selectedLayer, leftDiffIndex, rightDiffIndex])
     const handleSubOpSelection = (op) => {
         setSelectedOp(op)
         setSelectedLayer(subopMLIRData.index)

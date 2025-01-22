@@ -1,7 +1,7 @@
 import './App.css';
-import React, {useEffect, useState} from "react";
+import React, {useState} from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import {Button, Col, Container, Form, Modal, Navbar, Row, Tab, Tabs} from 'react-bootstrap';
+import {Col, Container, Form, Modal, Navbar, Row} from 'react-bootstrap';
 import {TraceOnlyView} from "./TraceOnlyView";
 import {ProfilingView} from "./ProfilingView";
 import {DebuggingView} from "./DebuggingView";

@@ -1,20 +1,7 @@
-import React, {useEffect, useState} from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import {Button, CloseButton, Col, Container, Form, Nav, Navbar, Row, Tab, Tabs} from 'react-bootstrap';
-import {MLIRViewer} from "@lingodb/common/MLIRViewer";
-import {RelationalPlanViewer} from "@lingodb/common/RelationalPlanViewer";
+import {CloseButton, Col, Container, Form, Nav, Navbar, Row} from 'react-bootstrap';
 import {TraceViewer} from "@lingodb/common/TraceViewer";
-import {
-    analyzeLayers,
-    collectChildren, collectChildrenWithData,
-    getBaseReference,
-    goDown,
-    goDownDirect,
-    goUp, goUpDirect, opSameExceptLoc, opSameExceptLocAndChildren
-} from "@lingodb/common/MLIRLayerAnalysis";
-import {SubOpPlanViewer} from "@lingodb/common/SubOpPlanViewer";
-import {PerfSymbolTable} from "./PerfSymbolTable";
-import {PerfAsmViewer} from "./PerfAsmViewer";
+
 
 export const TraceOnlyView = ({data, onClose}) => {
 
