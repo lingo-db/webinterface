@@ -149,6 +149,10 @@ export const opSameExceptLocAndChildren = (leftData, rightData,valueMapping, fir
 
 export const goUp = (opId, relalgBaseRef, info) => {
     let collectedChildren = []
+    if (!info.indexedOps[opId]) {
+        console.log("could not find op", opId)
+        return []
+    }
     collectChildren(info.indexedOps[opId], collectedChildren)
     let res = []
     collectedChildren.forEach((childId) => {
@@ -168,6 +172,10 @@ export const goUp = (opId, relalgBaseRef, info) => {
 }
 export const goUpDirect = (opId, relalgBaseRef, info) => {
     let res = []
+    if (!info.indexedOps[opId]) {
+        console.log("could not find op", opId)
+        return []
+    }
     let curr = opId
     while (curr) {
         let op = info.indexedOps[curr]
@@ -182,6 +190,10 @@ export const goUpDirect = (opId, relalgBaseRef, info) => {
 
 export const goDown = (opId, subOpBaseRef, info) => {
     let collectedChildren = []
+    if (!info.indexedOps[opId]) {
+        console.log("could not find op", opId)
+        return []
+    }
     collectChildren(info.indexedOps[opId], collectedChildren)
     let res = []
     const descend = (curr)=>{
@@ -203,6 +215,10 @@ export const goDown = (opId, subOpBaseRef, info) => {
 }
 export const goDownDirect = (opId, subOpBaseRef, info) => {
     let res = []
+    if (!info.indexedOps[opId]) {
+        console.log("could not find op", opId)
+        return []
+    }
     const descend = (curr)=>{
         let op = info.indexedOps[curr]
         if (op.id.startsWith(subOpBaseRef + ":")) {

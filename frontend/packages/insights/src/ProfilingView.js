@@ -128,13 +128,11 @@ export const ProfilingView = ({data, onClose}) => {
         leftChildren.forEach((op)=>{
             if(op&&op.id) {
                 const related = goDownDirect(op.id, rightDiffBaseRef, layerInfo)
-                console.log(op.id, "related", related)
                 if(related.length===0){
                     leftBackground[op.id]="lightgray"
                 }
                 if(related.length===1){
                     const same=opSameExceptLocAndChildren(leftOps[op.id],rightOps[related[0]],valueMapping,true)
-                    console.log("compare", leftOps[op.id], rightOps[related[0]],same)
                     if(!same) {
                         leftBackground[op.id] = "#ffebba"
                     }else{
@@ -153,13 +151,11 @@ export const ProfilingView = ({data, onClose}) => {
         rightChildren.forEach((op)=>{
             if(op&&op.id) {
                 const related = goUpDirect(op.id, leftDiffBaseRef, layerInfo)
-                console.log(op.id, "related", related)
                 if(related.length===0){
                     rightBackground[op.id]="lightgray"
                 }
                 if(related.length===1){
                     const same=opSameExceptLocAndChildren(leftOps[related[0]],rightOps[op.id],valueMapping,true)
-                    console.log("compare", rightOps[op.id], leftOps[related[0]],same)
                     if(!same) {
                         rightBackground[op.id] = "#ffebba"
                     }else{
@@ -173,7 +169,6 @@ export const ProfilingView = ({data, onClose}) => {
         })
         setLeftDiffBackground(leftBackground)
         setRightDiffBackground(rightBackground)
-        console.log("left",leftBackground)
     }
 
 
@@ -200,7 +195,6 @@ export const ProfilingView = ({data, onClose}) => {
             displayedLayers.forEach((l) => {
                 if (l.idx && selectedLayer !== l.idx) {
                     const baseRef = getBaseReference(data.layers[l.idx].passInfo.file)
-                    console.log("baseRef", baseRef, "goingDown", selectedLayer < l.idx, selectedLayer, l.index)
                     const relatedOps = selectedLayer < l.idx ? goDown(selectedOp, baseRef, layerInfo) : goUp(selectedOp, baseRef, layerInfo)
                     l.fn(relatedOps)
                 } else if (l.idx) {
@@ -210,7 +204,7 @@ export const ProfilingView = ({data, onClose}) => {
         }
     }, [data, layerInfo,relalgMLIRData,subopMLIRData,imperativeMLIRData,llvmMLIRData, selectedOp, selectedLayer])
     useEffect(() => {
-        if (selectedOp && selectedLayer) {
+        if (selectedOp && selectedLayer&&leftDiffIndex&&rightDiffIndex) {
             const displayedLayers = [{idx: leftDiffIndex, fn: setSelectedLeftOps}, {
                 idx: rightDiffIndex,
                 fn: setSelectedRightOps
@@ -218,7 +212,6 @@ export const ProfilingView = ({data, onClose}) => {
             displayedLayers.forEach((l) => {
                 if (l.idx && selectedLayer !== l.idx) {
                     const baseRef = getBaseReference(data.layers[l.idx].passInfo.file)
-                    console.log("baseRef", baseRef, "goingDown", selectedLayer < l.idx, selectedLayer, l.index)
                     const relatedOps = selectedLayer < l.idx ? goDown(selectedOp, baseRef, layerInfo) : goUp(selectedOp, baseRef, layerInfo)
                     l.fn(relatedOps)
                 } else if (l.idx) {
@@ -262,7 +255,6 @@ export const ProfilingView = ({data, onClose}) => {
     }
     const handleInstrClick = (instr) => {
         if (instr.loc) {
-            console.log("selected llvm", [instr.loc])
             const op = instr.loc
             handleLLVMOpSelection(op)
 
