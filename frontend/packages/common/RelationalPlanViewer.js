@@ -253,8 +253,8 @@ export const RelationalPlanViewer = ({height, width, input, onOperatorSelect, se
         return <g>
             <polyline key={`edge,${edge.id.v},${edge.id.w}`} points={points} fill={"none"}
                       stroke={"white"} strokeWidth={estimatedStrokeWidth} strokeLinecap={"square"} strokeOpacity={0.5}></polyline>
-            <polyline key={`edge2,${edge.id.v},${edge.id.w}`} points={points} fill={"none"}
-                      stroke={"blue"} strokeWidth={cardStrokeWidth} strokeLinecap={"square"} strokeOpacity={0.5}></polyline>
+            {(edge.cardinality||edge.cardinality===0)&&<polyline key={`edge2,${edge.id.v},${edge.id.w}`} points={points} fill={"none"}
+                      stroke={"blue"} strokeWidth={cardStrokeWidth} strokeLinecap={"square"} strokeOpacity={0.5}></polyline>}
             <text x={edge.points[1].x + 20} y={edge.points[1].y} stroke={"black"}
                   strokeWidth={"0.2"} fontSize={10}>{edge.label}</text>
         </g>

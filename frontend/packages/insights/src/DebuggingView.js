@@ -25,7 +25,7 @@ import {
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
 export const DebuggingView = ({data, onClose}) => {
-    const [viewMode, setViewMode] = useState("Plan")
+    const [viewMode, setViewMode] = useState("SideBySide")
     const [selectedOp, setSelectedOp] = useState(null)
     const [selectedLayer, setSelectedLayer] = useState(null)
     const [leftDiffIndex, setLeftDiffIndex] = useState(null);
