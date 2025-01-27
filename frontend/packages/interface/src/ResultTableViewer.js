@@ -9,7 +9,7 @@ export const ResultTableViewer = ({result, loading, error}) => {
             </div>)
     } else if (error) {
         return (
-            <div style={{height: '50vh', overflow: 'auto', textAlign: "center"}}>
+            <div style={{height: '50vh', overflowY: 'auto', maxWidth:"100vw"}}>
                 An Error occurred:
                 <pre>
                     {error}

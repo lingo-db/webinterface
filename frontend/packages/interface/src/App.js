@@ -1,6 +1,6 @@
 import './App.css';
 import {RelationalPlanViewer} from "@lingodb/common/RelationalPlanViewer"
-import {useRef, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import {
     Button,
     Tabs,
@@ -10,8 +10,7 @@ import {
     Dropdown,
     Form,
     FormGroup,
-    FormCheck,
-    Alert, Spinner
+    FormCheck, Spinner, Accordion
 } from 'react-bootstrap';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faPlay} from '@fortawesome/free-solid-svg-icons';
@@ -39,9 +38,9 @@ export const RelationalPlanViewerWithLoading = ({input, loading, error, onOperat
             </div>)
     } else if (error) {
         return (
-            <div style={{height: '50vh', overflow: 'auto', textAlign: "center"}}>
+            <div style={{height: '50vh', overflow: 'auto', maxWidth:"100vw"}}>
                 An Error occurred:
-                <pre>
+                <pre >
                     {error}
                 </pre>
             </div>
@@ -61,7 +60,7 @@ export const SubOpPlanViewerWithLoading = ({input, loading, error, selectedOps, 
             </div>)
     } else if (error) {
         return (
-            <div style={{height: '50vh', overflow: 'auto', textAlign: "center"}}>
+            <div style={{height: '50vh', overflow: 'auto', maxWidth:"100vw"}}>
                 An Error occurred:
                 <pre>
                     {error}
@@ -143,6 +142,10 @@ function App() {
     const [layerInfo, setLayerInfo] = useState(undefined)
     const [showResults, setShowResults] = useState(false)
     const [realCardinalities, setRealCardinalities] = useState(false)
+
+
+    const [selectedOp, setSelectedOp] = useState(null)
+    const [selectedLayer, setSelectedLayer] = useState(null)
 
     const [selectedRelAlgOps, setSelectedRelAlgOps] = useState([])
     const [selectedSubOpOps, setSelectedSubOpOps] = useState([])
@@ -271,42 +274,55 @@ function App() {
         }
     };
 
-    const handleRelAlgOpSelection=(op)=>{
-        setSelectedRelAlgOps([op])
-        const subOpBaseRef=getBaseReference(layers[3].passInfo.file)
-        const imp1BaseRef=getBaseReference(layers[4].passInfo.file)
-        const imp2BaseRef=getBaseReference(layers[5].passInfo.file)
-        const relatedSubOps=goDown(op, subOpBaseRef, layerInfo)
-        const relatedImpOps1=goDown(op, imp1BaseRef, layerInfo)
-        const relatedImpOps2=goDown(op, imp2BaseRef, layerInfo)
-        setSelectedSubOpOps(relatedSubOps)
-        setSelectedImpOps1(relatedImpOps1)
-        setSelectedImpOps2(relatedImpOps2)
-        console.log("selecting SubOps:", relatedSubOps)
+
+    useEffect(() => {
+        if (selectedOp && selectedLayer) {
+            const displayedLayers = [{idx: 1, fn: setSelectedRelAlgOps}, {
+                idx: 3,
+                fn: setSelectedSubOpOps
+            }, {idx: 4, fn: setSelectedImpOps1}, {idx: 5, fn: setSelectedImpOps2}]
+            displayedLayers.forEach((l) => {
+                if (l.idx && selectedLayer !== l.idx) {
+                    const baseRef = getBaseReference(layers[l.idx].passInfo.file)
+                    const relatedOps = selectedLayer < l.idx ? goDown(selectedOp, baseRef, layerInfo) : goUp(selectedOp, baseRef, layerInfo)
+                    l.fn(relatedOps)
+                } else if (l.idx) {
+                    l.fn([selectedOp])
+                }
+            })
+        }
+    }, [layers,layerInfo, selectedOp, selectedLayer])
+
+    const handleSubOpSelection = (op) => {
+        setSelectedOp(op)
+        setSelectedLayer(3)
     }
-    const handleSubOpOpSelection=(op)=>{
-        setSelectedSubOpOps([op])
-        const relalgBaseRef=getBaseReference(layers[1].passInfo.file)
-        const imp1BaseRef=getBaseReference(layers[4].passInfo.file)
-        const imp2BaseRef=getBaseReference(layers[5].passInfo.file)
-        const relatedRelalgOps=goUp(op, relalgBaseRef, layerInfo)
-        const relatedImpOps1=goDown(op, imp1BaseRef, layerInfo)
-        const relatedImpOps2=goDown(op, imp2BaseRef, layerInfo)
-        setSelectedRelAlgOps(relatedRelalgOps)
-        setSelectedImpOps1(relatedImpOps1)
-        setSelectedImpOps2(relatedImpOps2)
+    const handleImp1Selection = (op) => {
+        setSelectedOp(op)
+        setSelectedLayer(4)
+    }
+    const handleImp2Selection = (op) => {
+        setSelectedOp(op)
+        setSelectedLayer(5)
+    }
+    const handleRelAlgOpSelection = (op) => {
+        setSelectedOp(op)
+        setSelectedLayer(1)
     }
     return (
         <div className="App">
-            <h2>SQL WebInterface</h2>
-            <Alert variant="warning">
-                <b>Note!</b> This webinterface is for demo purposes only, and especially not suited for benchmarking.
-                It runs with 4 threads on a small virtual machine (4 GiB RAM, 4 virtual cores), and LingoDB executes queries
-                with additional verifications. Furthermore, every request is processed by executing one of LingoDB's command line tools which first
-                loads the data set into memory, increasing the observable latency significantly.
-            </Alert>
+            <Accordion>
+                <Accordion.Item eventKey="0">
+                    <Accordion.Header><b>This webinterface is for demo purposes only, and especially not suited for benchmarking.</b></Accordion.Header>
+                    <Accordion.Body>
+                        It runs with 4 threads on a small virtual machine (4 GiB RAM, 4 virtual cores), and LingoDB executes queries
+                        with additional verifications. Furthermore, every request is processed by executing one of LingoDB's command line tools which first
+                        loads the data set into memory, increasing the observable latency significantly.
+                    </Accordion.Body>
+                </Accordion.Item>
+            </Accordion>
             <Editor
-                height="40vh"
+                height={window.innerHeight*0.5-54-38-50}
                 defaultLanguage="sql"
                 value={query}
                 onMount={handleEditorDidMount}
@@ -365,7 +381,7 @@ function App() {
                         <div style={{height: '50vh', backgroundColor: "gray"}}>
                             <SubOpPlanViewerWithLoading input={subOpPlan} loading={queryPlanLoading}
                                                         error={queryPlanError} selectedOps={selectedSubOpOps}
-                                                        onOperatorSelect={handleSubOpOpSelection}/>
+                                                        onOperatorSelect={handleSubOpSelection}/>
                         </div>
                     </div>
                     <div eventKey="mlir" title="MLIR"
@@ -387,7 +403,7 @@ function App() {
                          }}>
                         <div style={{height: '50vh'}}>
                             {layers && <MLIRViewer height={window.innerHeight * 0.5} width={window.innerWidth}
-                                                   selectedOps={selectedSubOpOps} layer={layers[3]} onOpClick={(d)=>handleSubOpOpSelection(d.id)}/>}
+                                                   selectedOps={selectedSubOpOps} layer={layers[3]} onOpClick={(d)=>handleSubOpSelection(d.id)}/>}
                         </div>
                     </div>
                     <div title="MLIR"
@@ -398,7 +414,7 @@ function App() {
                          }}>
                         <div style={{height: '50vh'}}>
                             {layers && <MLIRViewer height={window.innerHeight * 0.5} width={window.innerWidth}
-                                                   selectedOps={selectedImpOps1} layer={layers[4]}  onOpClick={(d)=>{}}/>}
+                                                   selectedOps={selectedImpOps1} layer={layers[4]}  onOpClick={(d)=>{handleImp1Selection(d.id)}}/>}
                         </div>
                     </div>
                     <div title="MLIR"
@@ -409,7 +425,7 @@ function App() {
                          }}>
                         <div style={{height: '50vh'}}>
                             {layers && <MLIRViewer height={window.innerHeight * 0.5} width={window.innerWidth}
-                                                   selectedOps={selectedImpOps2} layer={layers[5]}  onOpClick={(d)=>{}}/>}
+                                                   selectedOps={selectedImpOps2} layer={layers[5]}  onOpClick={(d)=>{handleImp2Selection(d.id)}}/>}
                         </div>
                     </div>
                 </div>
