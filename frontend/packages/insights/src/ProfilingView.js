@@ -238,6 +238,12 @@ export const ProfilingView = ({data, onClose}) => {
         setLeftDiffIndex(llvmMLIRData.index - 1)
         setRightDiffIndex(llvmMLIRData.index)
     }
+    const handleImpOpSelection = (op) => {
+        setSelectedOp(op)
+        setSelectedLayer(imperativeMLIRData.index)
+        setLeftDiffIndex(imperativeMLIRData.index - 1)
+        setRightDiffIndex(imperativeMLIRData.index)
+    }
     const handleTraceSelect = (trace) => {
         if (trace.category === "Execution" && trace.name === "Step" && hasLayers) {
             handleSubOpSelection(trace.extra.location)
@@ -397,8 +403,7 @@ export const ProfilingView = ({data, onClose}) => {
                                         <MLIRViewer height={2 * (window.innerHeight - 90) / 3}
                                                     width={(window.innerWidth - 100) / 2}
                                                     layer={imperativeMLIRData} selectedOps={selectedImperativeOps}
-                                                    onOpClick={(d) => {
-                                                    }}></MLIRViewer>
+                                                    onOpClick={(d) => handleImpOpSelection(d.id)}></MLIRViewer>
                                     </div>
                                     <div style={{
                                         visibility: activeRightTab === "mlir_llvm" ? "visible" : "hidden",

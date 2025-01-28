@@ -8,7 +8,7 @@ const Instruction = ({data, selectionState, onInstrClick}) => {
         e.stopPropagation();
         onInstrClick(data)
     }} style={{backgroundColor:`rgba(255,0,0,${data.localPercentage/100*10})`}}>
-        <div style={{minWidth:80, display:"inline-block"}}>{data.localPercentage>0.05?`${data.localPercentage.toFixed(1)}%`:""}</div><div style={{backgroundColor: selBackgroundColor==="white"? `rgba(255,0,0,${data.localPercentage/100*10})`: selBackgroundColor,display:"inline", fontFamily:"monospace", textDecoration: data.loc?"underline":"default", }}>{data.asm}</div>
+        <div style={{minWidth:80, display:"inline-block"}}>{data.localPercentage>0.05?`${data.localPercentage.toFixed(1)}%`:""}</div><div style={{backgroundColor: selBackgroundColor==="white"? `none`: selBackgroundColor,display:"inline", fontFamily:"monospace", textDecoration: data.loc?"underline":"default", }}>{data.asm}</div>
     </div>)
 
 }
