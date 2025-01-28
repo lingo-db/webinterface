@@ -1,6 +1,5 @@
 import React, {useEffect, useState} from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import {Button, Col, Container, Form, Navbar, Row} from 'react-bootstrap';
 import {PlanViewer} from "./PlanViewer";
 
 
@@ -22,13 +21,7 @@ const OperatorContainer = ({heading, children}) => {
         </div>
     </div>
 }
-const computeRef = (d) => {
-    if (d.producing === "parent") {
-        return `${d.parent}-arg-${d.argnr}`
-    } else {
-        return d.producing
-    }
-}
+
 const Expression = ({data}) => {
     if (data.type === "expression_leaf") {
         if (data.leaf_type === "column") {
@@ -215,7 +208,12 @@ const RenderedNode = ({data, x, y, onOperatorSelect, selectedOps}) => {
         </div>
     }
 }
-
+const stateType=(data)=>{
+    if(data.stateType){
+        return ` [${data.stateType}]`
+    }
+    return ""
+}
 const Operator = ({data, onOperatorSelect, selectedOps}) => {
 
     if (data.type === "execution_step") {
@@ -296,17 +294,17 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
         } else if (data.subop === "get_external") {
             return <OperatorContainer heading={"GetExternal"}/>
         } else if (data.subop === "merge") {
-            return <OperatorContainer heading={"Merge"}></OperatorContainer>
+            return <OperatorContainer heading={"Merge"+stateType(data)}></OperatorContainer>
         } else if (data.subop === "scan") {
-            return <OperatorContainer heading={"Scan"}>
+            return <OperatorContainer heading={"Scan"+stateType(data)}>
                 {data.mapping.map((m) => <div>{m.member} → <Expression data={m.column}/></div>)}
             </OperatorContainer>
         } else if (data.subop === "scan_list") {
-            return <OperatorContainer heading={"Scan(List)"}>
+            return <OperatorContainer heading={"Scan [List]"}>
                 Element → <Expression data={data.elem}/>
             </OperatorContainer>
         } else if (data.subop === "scan_ref") {
-            return <OperatorContainer heading={"ScanRefs"}>
+            return <OperatorContainer heading={"ScanRefs"+stateType(data)}>
                 Ref → <Expression data={data.reference}/>
             </OperatorContainer>
         } else if (data.subop === "union") {
@@ -413,29 +411,29 @@ const Operator = ({data, onOperatorSelect, selectedOps}) => {
                 SegmentTreeView
             </OperatorContainer>
         } else if (data.subop === "materialize") {
-            return <OperatorContainer heading={"Materialize"}>
+            return <OperatorContainer heading={"Materialize"+stateType(data)}>
                 {data.mapping.map((m) => <div><Expression data={m.column}/> →{m.member}</div>)}
 
             </OperatorContainer>
         } else if (data.subop === "lookup_or_insert") {
-            return <OperatorContainer heading={"LookupOrInsert"}>
+            return <OperatorContainer heading={"LookupOrInsert"+stateType(data)}>
                 Ref: <Expression data={data.reference}/>
             </OperatorContainer>
         } else if (data.subop === "insert") {
-            return <OperatorContainer heading={"Insert"}>
+            return <OperatorContainer heading={"Insert"+stateType(data)}>
                 {data.mapping.map((m) => <div><Expression data={m.column}/> →{m.member}</div>)}
 
             </OperatorContainer>
         } else if (data.subop === "lookup") {
-            return <OperatorContainer heading={"Lookup"}>
+            return <OperatorContainer heading={"Lookup"+stateType(data)}>
                 Ref: <Expression data={data.reference}/>
             </OperatorContainer>
         } else if (data.subop === "get_begin_reference") {
-            return <OperatorContainer heading={"GetBegin"}>
+            return <OperatorContainer heading={"GetBegin"+stateType(data)}>
                 Ref: <Expression data={data.reference}/>
             </OperatorContainer>
         } else if (data.subop === "get_end_reference") {
-            return <OperatorContainer heading={"GetEnd"}>
+            return <OperatorContainer heading={"GetEnd"+stateType(data)}>
                 Ref: <Expression data={data.reference}/>
             </OperatorContainer>
         } else if (data.subop === "entries_between") {

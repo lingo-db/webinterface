@@ -136,7 +136,7 @@ const Operator = ({data}) => {
         {data.computed.map((comp) => <div><Expression data={comp.computed}/>: <Expression data={comp.expression}/>
             </div>)}
         </OperatorContainer>
-    } else if (data.operator == "window") {
+    } else if (data.operator === "window") {
         return <OperatorContainer heading={`\u{1FA9F}\u2003 Window`}>
             <div>{data.frame.start} to {data.frame.end}</div>
             <div><b>Partition By:</b> {data.partition.map((expr) => <Expression data={expr}/>)}</div>
@@ -145,7 +145,7 @@ const Operator = ({data}) => {
             <div><b>Aggregates:</b> {data.aggregates.map((agg) => <div><Expression data={agg.computed}/>: <Expression
                 data={agg.aggregation}/></div>)}</div>
         </OperatorContainer>
-    } else if (data.operator == "union") {
+    } else if (data.operator === "union") {
         return <OperatorContainer heading={`\u222a\u2003 Union`}>
             {data.semantics}
         </OperatorContainer>
@@ -206,7 +206,7 @@ export const RelationalPlanViewer = ({height, width, input, onOperatorSelect, se
             currNodes.push(input_elem);
             input_elem.consuming.forEach((child) => {
                 currEdges.push([input_elem.ref, child.ref, {
-                    label: (child.cardinality || child.cardinality === 0) ? `${formatCount(child.cardinality)} est: ${formatCount(child.estimatedCardinality)}` : formatCount(child.estimatedCardinality),
+                    label: (child.cardinality || child.cardinality === 0) ? `${formatCount(child.cardinality)} est: ${formatCount(child.estimatedCardinality)}` : (child.estimatedCardinality||child.estimatedCardinality===0) ? formatCount(child.estimatedCardinality):"",
                     cardinality: child.cardinality,
                     estimatedCardinality: child.estimatedCardinality
                 }])

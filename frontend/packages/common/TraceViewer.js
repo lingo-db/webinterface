@@ -86,7 +86,11 @@ export const TraceViewer = ({traceData,width, height, onSelect}) => {
     const [selectedEvent, setSelectedEvent] = useState(null)
     const selectEvent = (event) => {
         setSelectedEvent(event)
-        onSelect(event)
+        if (event.category === "Execution" && event.name === "Step") {
+            onSelect(event)
+        }else{
+            data.filter((d) => d.category === "Execution" && d.name === "Step" && d.start<=event.start && d.start+d.duration>=event.start+event.duration).forEach((d) => onSelect(d))
+        }
     }
     const formatExtraText = (d) => {
         let extra = []
