@@ -16,7 +16,7 @@ export const PerfSymbolTable = ({data})=>{
                 {data.map((row, index) => (
                     <tr key={index}>
                         <td >{row.file}</td>
-                        <td >{row.symbol}</td>
+                        <td style={{maxWidth:"25vw",wordWrap:"break-word"}}>{row.symbol}</td>
                         <td >{(row.percentage*100).toFixed(1)}</td>
 
                     </tr>
