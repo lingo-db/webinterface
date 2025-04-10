@@ -29,7 +29,7 @@ if "WEBINTERFACE_LOCAL" in os.environ:
     )
 
 memory_limit =(int)  (3.3 * 1024 * 1024 * 1024)
-resource.setrlimit(resource.RLIMIT_AS, (memory_limit, memory_limit))
+resource.setrlimit(resource.RLIMIT_RSS, (memory_limit, memory_limit))
 
 
 def table_to_json(raw_table):

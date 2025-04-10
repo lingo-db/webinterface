@@ -112,6 +112,16 @@ const Operator = ({data}) => {
             <div><b>Aggregates:</b> {data.aggregates.map((agg) => <div><Expression data={agg.computed}/>: <Expression
                 data={agg.aggregation}/></div>)}</div>
         </OperatorContainer>
+    } else if (data.operator === "groupjoin") {
+        return <OperatorContainer heading={`\u25b7\u0393\u2003 GroupJoin`}>
+            <div><b>Keys:</b> {data.keys.map((key) => <div><Expression data={key.left}/><Expression data={key.right}/>
+            </div>)}</div>
+            <div><b>Mapped:</b> {data.mapped.map((m) => <div><Expression data={m.computed}/>: <Expression
+                data={m.expression}/></div>)}</div>
+            <div><b>Aggregates:</b> {data.aggregates.map((agg) => <div><Expression data={agg.computed}/>: <Expression
+                data={agg.aggregation}/></div>)}</div>
+            <div><b>Behavior: </b>{data.behavior}</div>
+        </OperatorContainer>
     } else if (data.operator === "materialize") {
         return <OperatorContainer heading={`\u03c0\u2003 Materialize`}>
             <div><b>Output:</b> {data.output.map((output) => <div>{output.name}: <Expression data={output.column}/>
