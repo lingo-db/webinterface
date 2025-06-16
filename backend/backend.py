@@ -76,7 +76,7 @@ def run_sql_query(query_str, db):
         table_as_json = table_to_json(raw_table=result)
         return {"result": table_as_json, "timing": {
             "compilation": sum([times_dict[t] for t in
-                                ["lowerRelAlg", "lowerSubOp", "lowerDB", "lowerDSA", "lowerToLLVM", "toLLVMIR",
+                                ["lowerRelAlg", "lowerSubOp", "lowerDB", "lowerArrow", "lowerToLLVM", "toLLVMIR",
                                  "llvmOptimize", "llvmCodeGen"]]),
             "execution": times_dict["executionTime"],
             "qopt": times_dict["QOpt"],
