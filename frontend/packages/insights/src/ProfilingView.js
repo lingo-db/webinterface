@@ -308,9 +308,9 @@ export const ProfilingView = ({data, onClose}) => {
                 <Container fluid className="pt-5 mt-3">
                     <Row>
                         <Col className="p-3"
-                             style={{height: (window.innerHeight - 80) / 3, backgroundColor: '#f8f9fa'}}>
+                             style={{height: (window.innerHeight - 98) / 3, backgroundColor: '#f8f9fa'}}>
                             {hasTrace &&
-                                <TraceViewer height={(window.innerHeight - 80) / 3} width={window.innerWidth - 20}
+                                <TraceViewer height={(window.innerHeight - 98) / 3} width={window.innerWidth - 20}
                                              traceData={data.trace} onSelect={handleTraceSelect}></TraceViewer>}
                         </Col>
                     </Row>
@@ -330,7 +330,7 @@ export const ProfilingView = ({data, onClose}) => {
                                 position: 'absolute'
                             }}>
                                 {hasPlan &&
-                                    <RelationalPlanViewer height={2 * (window.innerHeight - 90) / 3}
+                                    <RelationalPlanViewer height={2 * (window.innerHeight - 98) / 3}
                                                           width={(window.innerWidth - 100) / 2}
                                                           input={data.plan}
                                                           onOperatorSelect={(id) => handleRelAlgOpSelection(id)}
@@ -341,7 +341,7 @@ export const ProfilingView = ({data, onClose}) => {
                                 position: 'absolute'
                             }}>
                                 {hasSubOpPlan &&
-                                    <SubOpPlanViewer height={2 * (window.innerHeight - 90) / 3}
+                                    <SubOpPlanViewer height={2 * (window.innerHeight - 98) / 3}
                                                      width={(window.innerWidth - 100) / 2}
                                                      input={data.subopplan} onOperatorSelect={(id) => {
                                         handleSubOpSelection(id)
@@ -380,7 +380,7 @@ export const ProfilingView = ({data, onClose}) => {
                                         position: 'absolute'
                                     }}>
 
-                                        <MLIRViewer height={2 * (window.innerHeight - 90) / 3}
+                                        <MLIRViewer height={2 * (window.innerHeight - 98) / 3}
                                                     width={(window.innerWidth - 100) / 2}
                                                     layer={relalgMLIRData} selectedOps={selectedRelAlgOps}
                                                     onOpClick={(d) => handleRelAlgOpSelection(d.id)}></MLIRViewer>
@@ -390,7 +390,7 @@ export const ProfilingView = ({data, onClose}) => {
                                         position: 'absolute'
                                     }}>
 
-                                        <MLIRViewer height={2 * (window.innerHeight - 90) / 3}
+                                        <MLIRViewer height={2 * (window.innerHeight - 98) / 3}
                                                     width={(window.innerWidth - 100) / 2}
                                                     layer={subopMLIRData} selectedOps={selectedSubOpOps}
                                                     onOpClick={(d) => handleSubOpSelection(d.id)}></MLIRViewer>
@@ -400,7 +400,7 @@ export const ProfilingView = ({data, onClose}) => {
                                         position: 'absolute'
                                     }}>
 
-                                        <MLIRViewer height={2 * (window.innerHeight - 90) / 3}
+                                        <MLIRViewer height={2 * (window.innerHeight - 98) / 3}
                                                     width={(window.innerWidth - 100) / 2}
                                                     layer={imperativeMLIRData} selectedOps={selectedImperativeOps}
                                                     onOpClick={(d) => handleImpOpSelection(d.id)}></MLIRViewer>
@@ -410,7 +410,7 @@ export const ProfilingView = ({data, onClose}) => {
                                         position: 'absolute'
                                     }}>
 
-                                        <MLIRViewer height={2 * (window.innerHeight - 90) / 3}
+                                        <MLIRViewer height={2 * (window.innerHeight - 98) / 3}
                                                     width={(window.innerWidth - 100) / 2}
                                                     layer={llvmMLIRData} selectedOps={selectedLLVMOps}
                                                     onOpClick={(d) => handleLLVMOpSelection(d.id)}
@@ -420,7 +420,7 @@ export const ProfilingView = ({data, onClose}) => {
                                         visibility: activeRightTab === "asm" ? "visible" : "hidden",
                                         position: 'absolute'
                                     }}>
-                                        {hasPerf && <PerfAsmViewer height={2 * (window.innerHeight - 90) / 3}
+                                        {hasPerf && <PerfAsmViewer height={2 * (window.innerHeight - 98) / 3}
                                                                    width={(window.innerWidth - 100) / 2}
                                                                    data={data.perf.generated}
                                                                    onInstrClick={handleInstrClick}

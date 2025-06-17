@@ -216,7 +216,7 @@ export const TraceViewer = ({traceData,width, height, onSelect}) => {
     //}, []);
     return (
         <div>
-            <div style={{maxHeight: height-60, overflowY: "auto"}}>
+            <div style={{maxHeight: height-60, overflowY: "auto"}} title={"CTRL+Scroll for Zooming, Drag and Drop for Moving"}>
                 <Stage width={canvasWidth} height={window.innerHeight}
                        onWheel={(e) => handleScroll(e)} onMouseDown={handleMouseDown} onMouseUp={handleMouseUp}
                        onMouseMove={handleMouseMove}>
