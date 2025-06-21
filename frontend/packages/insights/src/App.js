@@ -1,7 +1,7 @@
 import './App.css';
 import React, {useState} from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import {Button, Col, Container, Form, Modal, Navbar, Row} from 'react-bootstrap';
+import {Col, Container, DropdownButton, Dropdown, Form, Modal, Navbar, Row} from 'react-bootstrap';
 import {TraceOnlyView} from "./TraceOnlyView";
 import {ProfilingView} from "./ProfilingView";
 import {DebuggingView} from "./DebuggingView";
@@ -78,8 +78,21 @@ const App = () => {
                                 <h2>Demo Files</h2>
                                 <p style={{marginTop:"40px"}}>
 
-                                <Button variant="outline-light" onClick={()=>handleDemoFile("tpch-22-sf10")}> TPC-H Q22, SF=10</Button>
-                                </p>
+                                    <DropdownButton
+                                        variant="outline-light"
+                                        title="Select TPC-H Query (SF=10)"
+                                        id="tpch-query-dropdown"
+                                    >
+                                        {Array.from({ length: 22 }, (_, i) => {
+                                            const queryNumber = i + 1;
+                                            const fileName = `tpch-${queryNumber}-sf10`;
+                                            return (
+                                                <Dropdown.Item key={queryNumber} onClick={() => handleDemoFile(fileName)}>
+                                                    TPC-H Q{queryNumber}
+                                                </Dropdown.Item>
+                                            );
+                                        })}
+                                    </DropdownButton>                                </p>
                             </Col>
                         </Row>
                     </Container>
