@@ -166,6 +166,86 @@ export const TraceViewer = ({traceData,width, height, onSelect}) => {
             setMouseDownLocation(e.evt.layerX)
         }
     }
+    const [lastTouchX, setLastTouchX] = useState(null)
+
+    const handleTouchStart = (e) => {
+        if (e.evt.touches.length === 1) {
+            setLastTouchX(e.evt.touches[0].clientX);
+        }
+    }
+    const [lastPinchDistance, setLastPinchDistance] = useState(null);
+    const handleTouchMove = (e) => {
+        const touches = e.evt.touches;
+
+        if (touches.length === 2) {
+            e.evt.preventDefault(); // Prevent page scroll
+
+            const dx = touches[0].clientX - touches[1].clientX;
+            const dy = touches[0].clientY - touches[1].clientY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            const centerX = (touches[0].clientX + touches[1].clientX) / 2;
+            const layerX = centerX - offsetX;
+            const timePosition = layerX / scaleX + timeRange[0];
+
+            if (lastPinchDistance) {
+                const scaleFactor = distance / lastPinchDistance;
+                let newScaleX = scaleX * scaleFactor;
+
+                if (newScaleX < initialScaleX) {
+                    newScaleX = initialScaleX;
+                    setScaleX(newScaleX);
+                    setTimeRange([0, maxTime]);
+                } else {
+                    const newPosition = (timePosition - timeRange[0]) * newScaleX;
+                    const diff = layerX - newPosition;
+                    let newTimeStart = timeRange[0] - diff / newScaleX;
+                    let newTimeEnd = newTimeStart + dataWidth / newScaleX;
+
+                    if (newTimeEnd > maxTime) {
+                        newTimeStart -= newTimeEnd - maxTime;
+                        newTimeEnd = maxTime;
+                    }
+
+                    if (newTimeStart < 0) {
+                        newTimeStart = 0;
+                        newTimeEnd = dataWidth / newScaleX;
+                    }
+
+                    setScaleX(newScaleX);
+                    setTimeRange([newTimeStart, newTimeEnd]);
+                }
+            }
+
+            setLastPinchDistance(distance);
+        } else if (touches.length === 1 && lastTouchX !== null) {
+            // one-finger pan
+            const currentX = touches[0].clientX;
+            const deltaX = currentX - lastTouchX;
+
+            let newTimeStart = timeRange[0] - deltaX / scaleX;
+            let newTimeEnd = newTimeStart + dataWidth / scaleX;
+
+            if (newTimeStart < 0) {
+                newTimeStart = 0;
+                newTimeEnd = dataWidth / scaleX;
+            }
+            if (newTimeEnd > maxTime) {
+                newTimeStart -= newTimeEnd - maxTime;
+                newTimeEnd = maxTime;
+            }
+
+            setTimeRange([newTimeStart, newTimeEnd]);
+            setLastTouchX(currentX);
+        }
+    }
+
+
+    const handleTouchEnd = () => {
+        setLastTouchX(null);
+        setLastPinchDistance(null);
+    }
+
     const [rows, setRows] = useState([]);
 
 
@@ -216,10 +296,25 @@ export const TraceViewer = ({traceData,width, height, onSelect}) => {
     //}, []);
     return (
         <div>
-            <div style={{maxHeight: height-60, overflowY: "auto"}} title={"CTRL+Scroll for Zooming, Drag and Drop for Moving"}>
-                <Stage width={canvasWidth} height={window.innerHeight}
-                       onWheel={(e) => handleScroll(e)} onMouseDown={handleMouseDown} onMouseUp={handleMouseUp}
-                       onMouseMove={handleMouseMove}>
+            <div
+                style={{
+                    maxHeight: height - 60,
+                    overflowY: "auto",
+                    //touchAction: "none", // prevent browser gestures like zoom
+                    WebkitOverflowScrolling: "touch" // keep native scrolling on parent
+                }}
+                title={"CTRL+Scroll for Zooming, Drag and Drop for Moving"}
+            >                <Stage
+                    width={canvasWidth}
+                    height={window.innerHeight}
+                    onWheel={(e) => handleScroll(e)}
+                    onMouseDown={handleMouseDown}
+                    onMouseUp={handleMouseUp}
+                    onMouseMove={handleMouseMove}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                >
                     <Layer>
                         {
                             threads.map((t, i) => <Group>
@@ -248,14 +343,14 @@ export const TraceViewer = ({traceData,width, height, onSelect}) => {
                                     var correctedDuration = d.start < timeRange[0] ? duration - (timeRange[0] - d.start) : duration
                                     correctedDuration = d.start + duration > timeRange[1] ? duration - (d.start + duration - timeRange[1]) : correctedDuration
                                     if (duration == 0) {
-                                        return <Circle x={correctedStart * scaleX+offsetX} y={d.row * rowOffset+offsetY} radius={2} fill={"black"} onClick={()=> selectEvent(d)}></Circle>
+                                        return <Circle x={correctedStart * scaleX+offsetX} y={d.row * rowOffset+offsetY} radius={2} fill={"black"} onClick={()=> selectEvent(d)} onTap={()=>selectEvent(d)}></Circle>
                                     } else {
                                         let extraText = formatExtraText(d)
-                                        return (<Group onClick={() => selectEvent(d)}>
+                                        return (<Group onClick={() => selectEvent(d)}  onTap={()=>selectEvent(d)}>
                                             <Rect x={offsetX + correctedStart * scaleX} y={offsetY + d.row * rowOffset} height={15}
                                                   width={correctedDuration * scaleX}
                                                   fill={d.category=== "Ignore" ? "white":categoryColors[d.category + "::" + d.name]} stroke={"gray"} strokeWidth={0.4}
-                                                  onClick={() => {}}></Rect>
+                                                  onClick={() => {}} onTap={()=>{}}></Rect>
 
                                             <Text x={offsetX + correctedStart * scaleX} y={offsetY + d.row * rowOffset}
                                                   text={`${d.name} (${extraText})`}
