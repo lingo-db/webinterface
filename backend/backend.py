@@ -67,19 +67,15 @@ def run_sql_query(query_str, db):
         splitted = output.split("\n")
         header_list = splitted[-2].split()
         times_list = splitted[-1].split()
-        times_dict = {}
-
-        for i in range(len(header_list)):
-            if header_list[i] != 'name':
-                times_dict[header_list[i]] = float(times_list[i])
+        query_opt_time=float(times_list[1])
+        execution_time=float(times_list[-1])
+        compilation_time = sum(float(t) for t in times_list[2:-1])
         result = "\n".join(splitted[1:-4])
         table_as_json = table_to_json(raw_table=result)
         return {"result": table_as_json, "timing": {
-            "compilation": sum([times_dict[t] for t in
-                                ["lowerRelAlg", "lowerSubOp", "lowerDB", "lowerArrow", "lowerToLLVM", "toLLVMIR",
-                                 "llvmOptimize", "llvmCodeGen"]]),
-            "execution": times_dict["executionTime"],
-            "qopt": times_dict["QOpt"],
+            "compilation": compilation_time,
+            "execution": execution_time,
+            "qopt": query_opt_time
         }}
 
     except subprocess.CalledProcessError as e:
