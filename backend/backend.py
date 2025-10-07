@@ -131,6 +131,7 @@ async def analyze(database: str = Body(...), query: str = Body(...), real_card: 
                 return {"plan": json.loads(relalg_plan.split("\n")[0]), "subopplan": json.loads(subop_plan.split("\n")[0]),
                         "mlir": json.loads(analyzed_snapshots)}
     except Exception as e:
+        print(e, file=sys.stderr)
         raise HTTPException(status_code=400, detail="Error during query analyze")
     return {}
 
