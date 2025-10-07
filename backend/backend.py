@@ -65,10 +65,20 @@ def run_sql_query(query_str, db):
                                          env={**os.environ,"LINGODB_PARALLELISM": "4"})
         # Parse output and skip first and last 4 lines
         splitted = output.split("\n")
+        execution_has_error=False
+        if len(splitted) < 2:
+            execution_has_error=True
         header_list = splitted[-2].split()
+        if not "total" in header_list or not "name" in header_list:
+            execution_has_error=True
+        if execution_has_error:
+            cleaned_output = "\n".join(output.split("\n")[1:])
+            cleaned_output= cleaned_output.replace(f.name+":", "")
+            cleaned_output= cleaned_output.replace(f.name, "<query_file>")
+            raise HTTPException(status_code=400, detail=cleaned_output)
         times_list = splitted[-1].split()
         query_opt_time=float(times_list[1])
-        execution_time=float(times_list[-1])
+        execution_time=float(times_list[-2])
         compilation_time = sum(float(t) for t in times_list[2:-1])
         result = "\n".join(splitted[1:-4])
         table_as_json = table_to_json(raw_table=result)
@@ -81,7 +91,9 @@ def run_sql_query(query_str, db):
     except subprocess.CalledProcessError as e:
         # Print error message to stderr
         print(e.output, file=sys.stderr)
-        raise HTTPException(status_code=400, detail="Query could not be executed:\n" + e.output)
+        cleaned_output =  e.output.replace(f.name + ":", "")
+        cleaned_output = cleaned_output.replace(f.name, "<query_file>")
+        raise HTTPException(status_code=400, detail="Query execution failed (not expected) with following error:\n"+cleaned_output)
     except subprocess.TimeoutExpired as e:
         raise HTTPException(status_code=400, detail="Query took too long")
 
