@@ -22,6 +22,8 @@ const Expression = ({data}) => {
     if (data.type === "expression_leaf") {
         if (data.leaf_type === "column") {
             return <div style={{display: "inline"}}>{data.displayName}</div>
+        }else if (data.leaf_type === "simple_column") {
+            return <div style={{display: "inline"}}>{data.column}</div>
         } else if (data.leaf_type === "constant") {
             return <div style={{display: "inline"}}>{data.value}</div>
         } else if (data.leaf_type === "unknown") {
@@ -90,6 +92,9 @@ const Operator = ({data}) => {
     if (data.operator === "tablescan") {
         return <OperatorContainer heading={`\u2637\u2003 ${data.tablename}`}>
             <div><b>Table Size:</b> {data.tableSize}</div>
+            { data.restrictions && <div><b>Restrictions:</b> {data.restrictions.map((res) => <div><Expression data={res}/></div>)}</div>
+
+            }
         </OperatorContainer>
     } else if (data.operator === "selection") {
         return <OperatorContainer heading={`\u03c3\u2003 Selection`}>
