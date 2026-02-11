@@ -105,8 +105,8 @@ const renderBlock = ({data, selectionState, onOpClick}) => {
 export const MLIRViewer = ({layer, selectedOps, width, height, onOpClick, backgroundMap}) => {
     const scrollableDivRef = useRef(null);
     const getBackground = (data) => {
-        if (data.type === "op" && selectedOps.includes(data.id)) {
-            return "#FFE066"
+        if (data.type === "op" && selectedOps[data.id]) {
+            return selectedOps[data.id]
         }
         if(backgroundMap&&backgroundMap[data.id]){
             return backgroundMap[data.id]
@@ -114,8 +114,9 @@ export const MLIRViewer = ({layer, selectedOps, width, height, onOpClick, backgr
         return "#FFFFFF"
     }
     useEffect(() => {
-        if (selectedOps.length > 0 && scrollableDivRef) {
-            let currentElement = document.getElementById(selectedOps[0])
+        const keys = Object.keys(selectedOps)
+        if (keys.length > 0 && scrollableDivRef) {
+            let currentElement = document.getElementById(keys[0])
             if (currentElement)
                 currentElement.scrollIntoView({behavior: "smooth", block: "center"});
         }

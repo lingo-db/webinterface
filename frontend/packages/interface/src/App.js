@@ -12,6 +12,7 @@ import {
     FormGroup,
     FormCheck, Spinner, Accordion
 } from 'react-bootstrap';
+import {HIGHLIGHT_COLORS, updateHighlightedOps} from "@lingodb/common/HighlightUtils";
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
 import {faPlay} from '@fortawesome/free-solid-svg-icons';
 
@@ -147,10 +148,17 @@ function App() {
     const [selectedOp, setSelectedOp] = useState(null)
     const [selectedLayer, setSelectedLayer] = useState(null)
 
-    const [selectedRelAlgOps, setSelectedRelAlgOps] = useState([])
-    const [selectedSubOpOps, setSelectedSubOpOps] = useState([])
-    const [selectedImpOps1, setSelectedImpOps1] = useState([])
-    const [selectedImpOps2, setSelectedImpOps2] = useState([])
+    const [selectedRelAlgOps, setSelectedRelAlgOps] = useState({})
+    const [selectedSubOpOps, setSelectedSubOpOps] = useState({})
+    const [selectedImpOps1, setSelectedImpOps1] = useState({})
+    const [selectedImpOps2, setSelectedImpOps2] = useState({})
+
+    const [highlightColor, setHighlightColor] = useState(HIGHLIGHT_COLORS[0].value)
+    const highlightColorRef = useRef(HIGHLIGHT_COLORS[0].value)
+    const handleColorChange = (color) => {
+        setHighlightColor(color)
+        highlightColorRef.current = color
+    }
 
     const [selectedDB, setSelectedDB] = useState({
         label: 'TPC-H (SF1)',
@@ -277,6 +285,7 @@ function App() {
 
     useEffect(() => {
         if (selectedOp && selectedLayer) {
+            const color = highlightColorRef.current
             const displayedLayers = [{idx: 1, fn: setSelectedRelAlgOps}, {
                 idx: 3,
                 fn: setSelectedSubOpOps
@@ -285,9 +294,9 @@ function App() {
                 if (l.idx && selectedLayer !== l.idx) {
                     const baseRef = getBaseReference(layers[l.idx].passInfo.file)
                     const relatedOps = selectedLayer < l.idx ? goDown(selectedOp, baseRef, layerInfo) : goUp(selectedOp, baseRef, layerInfo)
-                    l.fn(relatedOps)
+                    l.fn(prev => updateHighlightedOps(prev, relatedOps, color))
                 } else if (l.idx) {
-                    l.fn([selectedOp])
+                    l.fn(prev => updateHighlightedOps(prev, [selectedOp], color))
                 }
             })
         }
@@ -342,6 +351,20 @@ function App() {
                     <QuerySelection db={selectedDB.value} cb={(content) => setQuery(content)}></QuerySelection>
                     <DropdownCheckbox label="Options" options={[{label: 'Real Cardinalities', value: 'real-cards'}]}
                                       onChange={handleOptionsChange}/>
+                    <Dropdown as={ButtonGroup}>
+                        <Dropdown.Toggle variant="outline-secondary">
+                            <span style={{display: "inline-block", width: 12, height: 12, backgroundColor: highlightColor, border: "1px solid #999", marginRight: 4}}></span>
+                            Highlight
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu>
+                            {HIGHLIGHT_COLORS.map(c => (
+                                <Dropdown.Item key={c.value} onClick={() => handleColorChange(c.value)} active={highlightColor === c.value}>
+                                    <span style={{display: "inline-block", width: 12, height: 12, backgroundColor: c.value, border: "1px solid #999", marginRight: 8}}></span>
+                                    {c.label}
+                                </Dropdown.Item>
+                            ))}
+                        </Dropdown.Menu>
+                    </Dropdown>
                     <a href={`https://github.com/lingo-db/lingo-db/commit/${lingodb_commit}`} rel="noreferrer" target="_blank" className="btn btn-outline-primary">
                         LingoDB@{lingodb_commit}
                     </a>

@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useMemo, useRef, useState} from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import {
     Button,
@@ -24,23 +24,30 @@ import {
 } from "@lingodb/common/MLIRLayerAnalysis";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { dracula } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import {HIGHLIGHT_COLORS} from "@lingodb/common/HighlightUtils";
 export const DebuggingView = ({data, onClose}) => {
     const [viewMode, setViewMode] = useState("SideBySide")
-    const [selectedOp, setSelectedOp] = useState(null)
-    const [selectedLayer, setSelectedLayer] = useState(null)
+    // selections: array of {op, layer, color} — one entry per color
+    const [selections, setSelections] = useState([])
     const [leftDiffIndex, setLeftDiffIndex] = useState(null);
     const [rightDiffIndex, setRightDiffIndex] = useState(null);
-    const [leftDiffData, setLeftDiffData] = useState(null);
-    const [rightDiffData, setRightDiffData] = useState(null);
-    const [leftDiffBackground, setLeftDiffBackground] = useState(null);
-    const [rightDiffBackground, setRightDiffBackground] = useState(null);
+    const [showDiff, setShowDiff] = useState(false);
     const [layerInfo, setLayerInfo] = useState(undefined)
-    const [selectedRelAlgOps, setSelectedRelAlgOps] = useState([]);
     const [relalgMLIRData, setRelalgMLIRData] = useState(null);
 
-
-    const [selectedLeftOps, setSelectedLeftOps] = useState([]);
-    const [selectedRightOps, setSelectedRightOps] = useState([]);
+    const [highlightColor, setHighlightColor] = useState(HIGHLIGHT_COLORS[0].value)
+    const highlightColorRef = useRef(HIGHLIGHT_COLORS[0].value)
+    const handleColorChange = (color) => {
+        setHighlightColor(color)
+        highlightColorRef.current = color
+    }
+    const addSelection = (op, layer) => {
+        const color = highlightColorRef.current
+        setSelections(prev => [
+            ...prev.filter(s => s.color !== color),
+            {op, layer, color}
+        ])
+    }
     useEffect(() => {
             if (data == null) {
                 setLayerInfo(null)
@@ -58,7 +65,21 @@ export const DebuggingView = ({data, onClose}) => {
         [data]
     )
 
-    const createDiff = () => {
+    // Derive layer data synchronously
+    const leftDiffData = useMemo(() => {
+        if (data && leftDiffIndex != null) return data.layers[leftDiffIndex]
+        return null
+    }, [data, leftDiffIndex])
+    const rightDiffData = useMemo(() => {
+        if (data && rightDiffIndex != null) return data.layers[rightDiffIndex]
+        return null
+    }, [data, rightDiffIndex])
+
+    // Compute diff backgrounds reactively
+    const {leftDiffBackground, rightDiffBackground} = useMemo(() => {
+        if (!showDiff || !data || leftDiffIndex == null || rightDiffIndex == null || !layerInfo) {
+            return {leftDiffBackground: null, rightDiffBackground: null}
+        }
         let leftChildren = []
         let rightChildren = []
         let leftBackground = {}
@@ -81,13 +102,11 @@ export const DebuggingView = ({data, onClose}) => {
         leftChildren.forEach((op) => {
             if (op && op.id) {
                 const related = goDownDirect(op.id, rightDiffBaseRef, layerInfo)
-                console.log(op.id, "related", related)
                 if (related.length === 0) {
                     leftBackground[op.id] = "lightgray"
                 }
                 if (related.length === 1) {
                     const same = opSameExceptLocAndChildren(leftOps[op.id], rightOps[related[0]], valueMapping, true)
-                    console.log("compare", leftOps[op.id], rightOps[related[0]], same)
                     if (!same) {
                         leftBackground[op.id] = "#ffebba"
                     } else {
@@ -106,13 +125,11 @@ export const DebuggingView = ({data, onClose}) => {
         rightChildren.forEach((op) => {
             if (op && op.id) {
                 const related = goUpDirect(op.id, leftDiffBaseRef, layerInfo)
-                console.log(op.id, "related", related)
                 if (related.length === 0) {
                     rightBackground[op.id] = "lightgray"
                 }
                 if (related.length === 1) {
                     const same = opSameExceptLocAndChildren(leftOps[related[0]], rightOps[op.id], valueMapping, true)
-                    console.log("compare", rightOps[op.id], leftOps[related[0]], same)
                     if (!same) {
                         rightBackground[op.id] = "#ffebba"
                     } else {
@@ -124,10 +141,8 @@ export const DebuggingView = ({data, onClose}) => {
                 }
             }
         })
-        setLeftDiffBackground(leftBackground)
-        setRightDiffBackground(rightBackground)
-        console.log("left", leftBackground)
-    }
+        return {leftDiffBackground: leftBackground, rightDiffBackground: rightBackground}
+    }, [showDiff, data, leftDiffIndex, rightDiffIndex, layerInfo])
     //return <TraceViewer></TraceViewer>
     const incAndSetLayer = (current, set) => {
         return () => {
@@ -143,40 +158,53 @@ export const DebuggingView = ({data, onClose}) => {
             }
         }
     }
-    useEffect(() => {
-        if (selectedOp && selectedLayer) {
-            const displayedLayers = [{idx: leftDiffIndex, fn: setSelectedLeftOps}, {
-                idx: rightDiffIndex,
-                fn: setSelectedRightOps
-            }]
-            displayedLayers.forEach((l) => {
-                if (l.idx && selectedLayer !== l.idx) {
-                    const baseRef = getBaseReference(data.layers[l.idx].passInfo.file)
-                    console.log("baseRef", baseRef, "goingDown", selectedLayer < l.idx, selectedLayer, l.index)
-                    const relatedOps = selectedLayer < l.idx ? goDown(selectedOp, baseRef, layerInfo) : goUp(selectedOp, baseRef, layerInfo)
-                    l.fn(relatedOps)
-                } else if (l.idx) {
-                    l.fn([selectedOp])
-                }
-            })
-        }
-    }, [data,layerInfo, selectedOp, selectedLayer, leftDiffIndex, rightDiffIndex])
+    // Compute highlights for left diff layer from ALL selections
+    const selectedLeftOps = useMemo(() => {
+        if (selections.length === 0 || leftDiffIndex == null || !layerInfo || !data) return {}
+        const ops = {}
+        selections.forEach(sel => {
+            if (sel.layer !== leftDiffIndex) {
+                const baseRef = getBaseReference(data.layers[leftDiffIndex].passInfo.file)
+                const relatedOps = sel.layer < leftDiffIndex ? goDown(sel.op, baseRef, layerInfo) : goUp(sel.op, baseRef, layerInfo)
+                relatedOps.forEach(opId => { ops[opId] = sel.color })
+            } else {
+                ops[sel.op] = sel.color
+            }
+        })
+        return ops
+    }, [data, layerInfo, selections, leftDiffIndex])
 
-    useEffect(() => {
-        if (selectedOp && selectedLayer) {
-            const displayedLayers = [{idx: relalgMLIRData.index, fn: setSelectedRelAlgOps}]
-            displayedLayers.forEach((l) => {
-                if (l.idx && selectedLayer !== l.idx) {
-                    const baseRef = getBaseReference(data.layers[l.idx].passInfo.file)
-                    console.log("baseRef", baseRef, "goingDown", selectedLayer < l.idx, selectedLayer, l.index)
-                    const relatedOps = selectedLayer < l.idx ? goDown(selectedOp, baseRef, layerInfo) : goUp(selectedOp, baseRef, layerInfo)
-                    l.fn(relatedOps)
-                } else if (l.idx) {
-                    l.fn([selectedOp])
-                }
-            })
-        }
-    }, [data, layerInfo,relalgMLIRData, selectedOp, selectedLayer])
+    // Compute highlights for right diff layer from ALL selections
+    const selectedRightOps = useMemo(() => {
+        if (selections.length === 0 || rightDiffIndex == null || !layerInfo || !data) return {}
+        const ops = {}
+        selections.forEach(sel => {
+            if (sel.layer !== rightDiffIndex) {
+                const baseRef = getBaseReference(data.layers[rightDiffIndex].passInfo.file)
+                const relatedOps = sel.layer < rightDiffIndex ? goDown(sel.op, baseRef, layerInfo) : goUp(sel.op, baseRef, layerInfo)
+                relatedOps.forEach(opId => { ops[opId] = sel.color })
+            } else {
+                ops[sel.op] = sel.color
+            }
+        })
+        return ops
+    }, [data, layerInfo, selections, rightDiffIndex])
+
+    // Compute highlights for relAlg layer from ALL selections
+    const selectedRelAlgOps = useMemo(() => {
+        if (selections.length === 0 || !relalgMLIRData || !layerInfo || !data) return {}
+        const ops = {}
+        selections.forEach(sel => {
+            if (sel.layer !== relalgMLIRData.index) {
+                const baseRef = getBaseReference(data.layers[relalgMLIRData.index].passInfo.file)
+                const relatedOps = sel.layer < relalgMLIRData.index ? goDown(sel.op, baseRef, layerInfo) : goUp(sel.op, baseRef, layerInfo)
+                relatedOps.forEach(opId => { ops[opId] = sel.color })
+            } else {
+                ops[sel.op] = sel.color
+            }
+        })
+        return ops
+    }, [data, layerInfo, relalgMLIRData, selections])
     const selectError = (index) => {
         console.log("select", index)
         let file= data.errors[index][0][0]
@@ -190,27 +218,15 @@ export const DebuggingView = ({data, onClose}) => {
         if(pass){
             setLeftDiffIndex(pass.index-1)
             setRightDiffIndex(pass.index)
-            setSelectedLayer(pass.index)
-            setSelectedOp(file.split(".")[0]+":"+line)
+            addSelection(file.split(".")[0]+":"+line, pass.index)
         }
     }
-    useEffect(() => {
-        if (data && leftDiffIndex) {
-            setLeftDiffData(data.layers[leftDiffIndex])
-        }
-    }, [leftDiffIndex, data])
-    useEffect(() => {
-        if (data && rightDiffIndex) {
-            setRightDiffData(data.layers[rightDiffIndex])
-        }
-    }, [rightDiffIndex, data])
     const selectFile = (index) => {
         setLeftDiffIndex(index-1)
         setRightDiffIndex(index)
     }
     const handleRelAlgOpSelection = (op) => {
-        setSelectedOp(op)
-        setSelectedLayer(relalgMLIRData.index)
+        addSelection(op, relalgMLIRData.index)
     }
     return (
         <div>
@@ -244,7 +260,21 @@ export const DebuggingView = ({data, onClose}) => {
                     </DropdownButton>
                     <Nav.Item><Nav.Link href={"#"}>Actions:</Nav.Link></Nav.Item>
 
-                    {leftDiffData && rightDiffData &&  <Button onClick={() => createDiff()}>Compute Diff</Button>}
+                    {leftDiffData && rightDiffData &&  <Button onClick={() => setShowDiff(prev => !prev)} variant={showDiff ? "primary" : "outline-primary"}>Compute Diff</Button>}
+                    <Dropdown style={{marginLeft: 8}}>
+                        <Dropdown.Toggle variant="outline-secondary" size="sm">
+                            <span style={{display: "inline-block", width: 12, height: 12, backgroundColor: highlightColor, border: "1px solid #999", marginRight: 4}}></span>
+                            Highlight Color
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu>
+                            {HIGHLIGHT_COLORS.map(c => (
+                                <Dropdown.Item key={c.value} onClick={() => handleColorChange(c.value)} active={highlightColor === c.value}>
+                                    <span style={{display: "inline-block", width: 12, height: 12, backgroundColor: c.value, border: "1px solid #999", marginRight: 8}}></span>
+                                    {c.label}
+                                </Dropdown.Item>
+                            ))}
+                        </Dropdown.Menu>
+                    </Dropdown>
 
                 </Nav>}
 
@@ -272,8 +302,7 @@ export const DebuggingView = ({data, onClose}) => {
                                     layer={leftDiffData} selectedOps={selectedLeftOps}
                                     backgroundMap={leftDiffBackground}
                                     onOpClick={(d) => {
-                                        setSelectedOp(d.id);
-                                        setSelectedLayer(leftDiffIndex)
+                                        addSelection(d.id, leftDiffIndex)
                                     }}></MLIRViewer>
                     </Col>
                     <Col className="p-3" style={{backgroundColor: '#f8f9fa'}}>
@@ -287,8 +316,7 @@ export const DebuggingView = ({data, onClose}) => {
                                     layer={rightDiffData} selectedOps={selectedRightOps}
                                     backgroundMap={rightDiffBackground}
                                     onOpClick={(d) => {
-                                        setSelectedOp(d.id);
-                                        setSelectedLayer(rightDiffIndex)
+                                        addSelection(d.id, rightDiffIndex)
                                     }}></MLIRViewer>
                     </Col>
                 </Row>

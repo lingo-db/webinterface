@@ -1,15 +1,47 @@
-import {useEffect, useState} from "react";
+import {useEffect, useState, useMemo} from "react";
+import Konva from "konva";
 import {Circle, Group, Layer, Line, Rect, Stage, Text} from "react-konva";
 
 
 
 
+function createStripePattern(color) {
+    const size = 12;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
 
+    // colored background
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, size, size);
+
+    // semi-transparent white diagonal stripes
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+    ctx.moveTo(0, size);
+    ctx.lineTo(size, 0);
+    ctx.stroke();
+
+    // wrap-around stripes for seamless tiling
+    ctx.beginPath();
+    ctx.moveTo(-size / 2, size / 2);
+    ctx.lineTo(size / 2, -size / 2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(size / 2, size * 1.5);
+    ctx.lineTo(size * 1.5, size / 2);
+    ctx.stroke();
+
+    return canvas;
+}
 
 
 
 const baseColors = ['hsl(4, 72%, 63.8%)', 'hsl(340, 65.6%, 57.2%)', 'hsl(291, 51.2%, 46.2%)', 'hsl(262, 41.6%, 51.7%)', 'hsl(231, 38.4%, 52.8%)', 'hsl(207, 72%, 59.4%)', 'hsl(199, 78.4%, 52.8%)', 'hsl(187, 80%, 46.2%)', 'hsl(174, 80%, 31.9%)', 'hsl(122, 31.2%, 53.9%)', 'hsl(88, 40%, 58.3%)', 'hsl(66, 56%, 59.4%)', 'hsl(45, 80%, 56.1%)', 'hsl(36, 80%, 55%)', 'hsl(14, 80%, 62.7%)', 'hsl(16, 20%, 41.8%)', 'hsl(200, 14.4%, 50.6%)', 'hsl(54, 80%, 68.2%)']
-const variantColors = ['hsl(4, 57.6%, 82.94%)', 'hsl(340, 52.48%, 74.36%)', 'hsl(291, 40.96%, 60.06%)', 'hsl(262, 33.28%, 67.21000000000001%)', 'hsl(231, 30.72%, 68.64%)', 'hsl(207, 57.6%, 77.22%)', 'hsl(199, 62.720000000000006%, 68.64%)', 'hsl(187, 64%, 60.06%)', 'hsl(174, 64%, 41.47%)', 'hsl(122, 24.96%, 70.07%)', 'hsl(88, 32%, 75.78999999999999%)', 'hsl(66, 44.8%, 77.22%)', 'hsl(45, 64%, 72.93%)', 'hsl(36, 64%, 71.5%)', 'hsl(14, 64%, 81.51%)', 'hsl(16, 16%, 54.339999999999996%)', 'hsl(200, 11.52%, 65.78%)', 'hsl(54, 64%, 88.66%)']
 
 export const TraceViewer = ({traceData,width, height, onSelect}) => {
     const [showExecutionOnly, setShowExecutionOnly] = useState(true)
@@ -20,6 +52,13 @@ export const TraceViewer = ({traceData,width, height, onSelect}) => {
     const [maxTime, setMaxTime] = useState(1)
     const [threads, setThreads] = useState([])
     const [categoryColors, setCategoryColors] = useState({})
+    const stripePatterns = useMemo(() => {
+        const patterns = {};
+        for (let key in categoryColors) {
+            patterns[key] = createStripePattern(categoryColors[key]);
+        }
+        return patterns;
+    }, [categoryColors]);
     const [canvasWidth, setCanvasWidth] = useState(0)
     const [dataWidth,setDataWidth]= useState(0)
     useEffect(()=> {
@@ -60,7 +99,9 @@ export const TraceViewer = ({traceData,width, height, onSelect}) => {
                                 categoryColors[entry.category + "::" + entry.name] = baseColors[idx]
                             }
                         }
-                        data.push({...entry, start: entry.start - minTime, duration: entry.duration, row: numRows,})
+                        //true if entry has member runtime that is true
+                        let isRuntimePart =  entry.runtime && entry.runtime===true
+                        data.push({...entry, start: entry.start - minTime, duration: entry.duration, row: numRows, runtimePart: isRuntimePart})
                     }
                     numRows++
                 }
@@ -305,6 +346,7 @@ export const TraceViewer = ({traceData,width, height, onSelect}) => {
                 }}
                 title={"CTRL+Scroll for Zooming, Drag and Drop for Moving"}
             >                <Stage
+                    renderPixelRatio={window.devicePixelRatio}
                     width={canvasWidth}
                     height={window.innerHeight}
                     onWheel={(e) => handleScroll(e)}
@@ -345,12 +387,16 @@ export const TraceViewer = ({traceData,width, height, onSelect}) => {
                                     if (duration == 0) {
                                         return <Circle x={correctedStart * scaleX+offsetX} y={d.row * rowOffset+offsetY} radius={2} fill={"black"} onClick={()=> selectEvent(d)} onTap={()=>selectEvent(d)}></Circle>
                                     } else {
-                                        let extraText = formatExtraText(d)
                                         return (<Group onClick={() => selectEvent(d)}  onTap={()=>selectEvent(d)}>
-                                            <Rect x={offsetX + correctedStart * scaleX} y={offsetY + d.row * rowOffset} height={15}
+                                            {
+                                                <Rect x={offsetX + correctedStart * scaleX} y={offsetY + d.row * rowOffset} height={15}
                                                   width={correctedDuration * scaleX}
-                                                  fill={d.category=== "Ignore" ? "white":categoryColors[d.category + "::" + d.name]} stroke={"gray"} strokeWidth={0.4}
+                                                  cornerRadius = {3}
+                                                  fill={d.category === "Ignore" ? "white" : d.runtimePart? undefined: categoryColors[d.category + "::" + d.name]}
+                                                  fillPatternImage={d.runtimePart? stripePatterns[d.category + "::" + d.name]:undefined}
+                                                  stroke={"gray"} strokeWidth={0.4}
                                                   onClick={() => {}} onTap={()=>{}}></Rect>
+                                            }
 
                                             <Text x={offsetX + correctedStart * scaleX} y={offsetY + d.row * rowOffset}
                                                   text={`${d.name}`}
@@ -371,9 +417,8 @@ export const TraceViewer = ({traceData,width, height, onSelect}) => {
                 </Stage>
             </div>
             <div>
-                <input type="checkbox" checked={showExecutionOnly} onChange={(e) => setShowExecutionOnly(e.target.checked)}/> Show Execution Only
                 {selectedEvent &&
-                    <div style={{display:"inline"}}><b>Selected Element:</b> Category: {selectedEvent.category} Name: {selectedEvent.name} Duration: {formatTime(selectedEvent.duration)} Metadata: {formatExtraText(selectedEvent)}
+                    <div style={{display:"inline"}}><b><i>{selectedEvent.category}::{selectedEvent.name}</i></b>: {formatTime(selectedEvent.duration)}
                     </div>
 
                 }

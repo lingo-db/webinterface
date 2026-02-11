@@ -1,6 +1,6 @@
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useRef, useState} from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import {Button, CloseButton, Col, Container, Form, Nav, Navbar, Row, Tab, Tabs} from 'react-bootstrap';
+import {Button, CloseButton, Col, Container, Dropdown, Form, Nav, Navbar, Row, Tab, Tabs} from 'react-bootstrap';
 import {MLIRViewer} from "@lingodb/common/MLIRViewer";
 import {RelationalPlanViewer} from "@lingodb/common/RelationalPlanViewer";
 import {TraceViewer} from "@lingodb/common/TraceViewer";
@@ -13,6 +13,7 @@ import {
     goUp, goUpDirect, opSameExceptLocAndChildren
 } from "@lingodb/common/MLIRLayerAnalysis";
 import {SubOpPlanViewer} from "@lingodb/common/SubOpPlanViewer";
+import {HIGHLIGHT_COLORS, updateHighlightedOps} from "@lingodb/common/HighlightUtils";
 import {PerfSymbolTable} from "./PerfSymbolTable";
 import {PerfAsmViewer} from "./PerfAsmViewer";
 
@@ -46,15 +47,23 @@ export const ProfilingView = ({data, onClose}) => {
     const [layerInfo, setLayerInfo] = useState(undefined)
 
 
-    //selected ops accross different layers
+    //selected ops accross different layers (maps: opId -> color)
     const [selectedOp, setSelectedOp] = useState(null)
     const [selectedLayer, setSelectedLayer] = useState(null)
-    const [selectedRelAlgOps, setSelectedRelAlgOps] = useState([]);
-    const [selectedSubOpOps, setSelectedSubOpOps] = useState([]);
-    const [selectedImperativeOps, setSelectedImperativeOps] = useState([]);
-    const [selectedLLVMOps, setSelectedLLVMOps] = useState([]);
-    const [selectedLeftOps, setSelectedLeftOps] = useState([]);
-    const [selectedRightOps, setSelectedRightOps] = useState([]);
+    const [selectedRelAlgOps, setSelectedRelAlgOps] = useState({});
+    const [selectedSubOpOps, setSelectedSubOpOps] = useState({});
+    const [selectedImperativeOps, setSelectedImperativeOps] = useState({});
+    const [selectedLLVMOps, setSelectedLLVMOps] = useState({});
+    const [selectedLeftOps, setSelectedLeftOps] = useState({});
+    const [selectedRightOps, setSelectedRightOps] = useState({});
+
+    //highlight color selection
+    const [highlightColor, setHighlightColor] = useState(HIGHLIGHT_COLORS[0].value)
+    const highlightColorRef = useRef(HIGHLIGHT_COLORS[0].value)
+    const handleColorChange = (color) => {
+        setHighlightColor(color)
+        highlightColorRef.current = color
+    }
 
 
 
@@ -185,6 +194,7 @@ export const ProfilingView = ({data, onClose}) => {
 
     useEffect(() => {
         if (selectedOp && selectedLayer) {
+            const color = highlightColorRef.current
             const displayedLayers = [{idx: relalgMLIRData.index, fn: setSelectedRelAlgOps}, {
                 idx: subopMLIRData.index,
                 fn: setSelectedSubOpOps
@@ -196,15 +206,16 @@ export const ProfilingView = ({data, onClose}) => {
                 if (l.idx && selectedLayer !== l.idx) {
                     const baseRef = getBaseReference(data.layers[l.idx].passInfo.file)
                     const relatedOps = selectedLayer < l.idx ? goDown(selectedOp, baseRef, layerInfo) : goUp(selectedOp, baseRef, layerInfo)
-                    l.fn(relatedOps)
+                    l.fn(prev => updateHighlightedOps(prev, relatedOps, color))
                 } else if (l.idx) {
-                    l.fn([selectedOp])
+                    l.fn(prev => updateHighlightedOps(prev, [selectedOp], color))
                 }
             })
         }
     }, [data, layerInfo,relalgMLIRData,subopMLIRData,imperativeMLIRData,llvmMLIRData, selectedOp, selectedLayer])
     useEffect(() => {
         if (selectedOp && selectedLayer&&leftDiffIndex&&rightDiffIndex) {
+            const color = highlightColorRef.current
             const displayedLayers = [{idx: leftDiffIndex, fn: setSelectedLeftOps}, {
                 idx: rightDiffIndex,
                 fn: setSelectedRightOps
@@ -213,9 +224,9 @@ export const ProfilingView = ({data, onClose}) => {
                 if (l.idx && selectedLayer !== l.idx) {
                     const baseRef = getBaseReference(data.layers[l.idx].passInfo.file)
                     const relatedOps = selectedLayer < l.idx ? goDown(selectedOp, baseRef, layerInfo) : goUp(selectedOp, baseRef, layerInfo)
-                    l.fn(relatedOps)
+                    l.fn(prev => updateHighlightedOps(prev, relatedOps, color))
                 } else if (l.idx) {
-                    l.fn([selectedOp])
+                    l.fn(prev => updateHighlightedOps(prev, [selectedOp], color))
                 }
             })
         }
@@ -292,6 +303,20 @@ export const ProfilingView = ({data, onClose}) => {
                                                         disabled={!(leftDiffData && rightDiffData)}>Diff</Button>}
                     {viewMode === "diff" && <Button onClick={() => setViewMode("overview")}>Overview</Button>}
                     {viewMode === "diff" && <Button onClick={() => createDiff()}>Create Diff</Button>}
+                    <Dropdown style={{marginLeft: 8}}>
+                        <Dropdown.Toggle variant="outline-secondary" size="sm">
+                            <span style={{display: "inline-block", width: 12, height: 12, backgroundColor: highlightColor, border: "1px solid #999", marginRight: 4}}></span>
+                            Highlight Color
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu>
+                            {HIGHLIGHT_COLORS.map(c => (
+                                <Dropdown.Item key={c.value} onClick={() => handleColorChange(c.value)} active={highlightColor === c.value}>
+                                    <span style={{display: "inline-block", width: 12, height: 12, backgroundColor: c.value, border: "1px solid #999", marginRight: 8}}></span>
+                                    {c.label}
+                                </Dropdown.Item>
+                            ))}
+                        </Dropdown.Menu>
+                    </Dropdown>
 
                 </Nav>
                 <Nav className="ms-auto" style={{paddingRight:10}}>

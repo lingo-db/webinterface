@@ -45,7 +45,7 @@ const Expression = ({data}) => {
     }
 }
 const OperatorContainer = ({heading, children}) => {
-    return <div style={{padding: 5, maxWidth: 600}}>
+    return <div style={{padding: 5, maxWidth: 400}}>
         <div style={{
             fontWeight: 700,
             textAlign: "center",
@@ -92,7 +92,6 @@ const joinSymbol = (joinType) => {
 }
 const Operator = ({data}) => {
     if (data.operator === "tablescan") {
-        console.log(data)
         return <OperatorContainer heading={`\u2637\u2003 ${data.tablename}`}>
             <div><b>Table Size:</b> {data.tableSize}</div>
             { data.restrictions && <div><b>Restrictions:</b> {data.restrictions.map((res) => <div><Expression data={res}/></div>)}</div>
@@ -259,7 +258,7 @@ export const RelationalPlanViewer = ({height, width, input, onOperatorSelect, se
         transform: `translate(${x}px, ${y}px)`,
         position: "absolute",
         border: "1px solid black",
-        backgroundColor: selectedOps.includes(node.ref) ? "#FFE066":"white",
+        backgroundColor: selectedOps[node.ref] || "white",
         borderRadius: 5,
         minWidth: 100,
     }} id={`plan-${node.ref}`} onClick={()=>onOperatorSelect(node.ref)}>
