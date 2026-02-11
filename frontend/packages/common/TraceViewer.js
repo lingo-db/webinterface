@@ -25,7 +25,7 @@ export const TraceViewer = ({traceData,width, height, onSelect}) => {
     useEffect(()=> {
         if (traceData) {
             let executionRecord = traceData.filter((d) => d.category === "Execution" && d.name === "run")
-            let filteredData = showExecutionOnly ?  traceData.filter((d) => d.start >= executionRecord[0].start && d.start <= executionRecord[0].start + executionRecord[0].duration) : traceData
+            let filteredData = showExecutionOnly ?  traceData.filter((d) => !(d.category === "Execution" && d.name === "run")&&d.start >= executionRecord[0].start && d.start <= executionRecord[0].start + executionRecord[0].duration) : traceData
             let analyzedData = filteredData.reduce((acc, d) => {
                 let event = d
                 if (!acc[d.tid]) {
@@ -353,7 +353,7 @@ export const TraceViewer = ({traceData,width, height, onSelect}) => {
                                                   onClick={() => {}} onTap={()=>{}}></Rect>
 
                                             <Text x={offsetX + correctedStart * scaleX} y={offsetY + d.row * rowOffset}
-                                                  text={`${d.name} (${extraText})`}
+                                                  text={`${d.name}`}
                                                   width={correctedDuration * scaleX} fontSize={14} fill={"white"} wrap={"none"}
                                                   ellipsis={true}></Text>
                                             {d.category === "Ignore" &&

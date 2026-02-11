@@ -2,11 +2,12 @@ import {useRef} from "react";
 
 
 const Instruction = ({data, selectionState, onInstrClick}) => {
-    const selBackgroundColor = data.loc&&selectionState.includes(data.loc) ? "yellow" : "transparent"
+    const selBackgroundColor = data.loc&&selectionState.includes(data.loc) ? "#FFE066" : "transparent"
+    const intensity = Math.min(data.localPercentage*4 / 100, 1);
     return (<div id={data.id} onClick={(e) => {
         e.stopPropagation();
         onInstrClick(data)
-    }} style={{backgroundColor: `rgba(255,0,0,${data.localPercentage / 100 * 10})`}}>
+    }} style={{backgroundColor: `rgba(220, 38, 38, ${intensity})`}}>
         <div style={{
             minWidth: 80,
             display: "inline-block"

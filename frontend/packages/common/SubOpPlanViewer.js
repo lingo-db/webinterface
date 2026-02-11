@@ -197,7 +197,7 @@ const RenderedNode = ({data, x, y, onOperatorSelect, selectedOps}) => {
             transform: `translate(${x}px, ${y}px)`,
             position: "absolute",
             border: "1px solid black",
-            backgroundColor: selectedOps.includes(data.ref) ? "yellow" : "white",
+            backgroundColor: selectedOps.includes(data.ref) ? "#FFE7A3" : "white",
             borderRadius: 5,
             minWidth: 100,
         }} id={`plan-${data.ref}`} onClick={(e) => {

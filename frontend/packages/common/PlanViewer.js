@@ -88,7 +88,7 @@ export const PlanViewer = memo(({
                 return Math.max(maxWidth, p.x+2)
             }, maxWidth)
         },requiredWidth)
-        requiredWidth = requiredWidth + (nested ? 10 : 0);
+        requiredWidth = requiredWidth + (nested ? 10 : 10);
 
         let minPoint=g.edges().reduce((minPoint,edgeId) => {
             let edge = g.edge(edgeId);

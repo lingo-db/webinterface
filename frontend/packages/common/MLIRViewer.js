@@ -34,12 +34,12 @@ const Render = ({data, selectionState, onOpClick}) => {
 }
 const renderOpName = ({data, selectionState, onOpClick}) => {
     return (
-        <div style={{display: "inline", color: "gray"}}>
+        <div style={{display: "inline", color: "#005CC5"}}>
             {data.value}
         </div>)
 }
 const renderValueUse = ({data, selectionState, onOpClick}) => {
-    return (<div style={{display: "inline", color: "blue"}}>
+    return (<div style={{display: "inline", color: "#D73A49"}}>
         {data.value}
     </div>)
 }
@@ -49,12 +49,12 @@ const renderRaw = ({data, selectionState, onOpClick}) => {
     </div>)
 }
 const renderResultGroup = ({data, selectionState, onOpClick}) => {
-    return (<div style={{display: "inline", color: "blue"}}>
+    return (<div style={{display: "inline", color: "#D73A49"}}>
         {data.value}
     </div>)
 }
 const renderBlockArgDef = ({data, selectionState, onOpClick}) => {
-    return (<div style={{display: "inline", color: "blue"}}>
+    return (<div style={{display: "inline", color: "#D73A49"}}>
         {data.value}
     </div>)
 }
@@ -71,13 +71,13 @@ const renderOp = ({data, selectionState, onOpClick}) => {
 }
 const renderAttribute = ({data, selectionState, onOpClick}) => {
     return (
-        <div style={{display: "inline", color: "orange"}}>
+        <div style={{display: "inline", color: "#6F42C1"}}>
             {data.value}
         </div>)
 }
 const renderType = ({data, selectionState, onOpClick}) => {
     return (
-        <div style={{display: "inline", color: "green"}}>
+        <div style={{display: "inline", color: "#22863A"}}>
             {data.value}
         </div>)
 
@@ -106,12 +106,12 @@ export const MLIRViewer = ({layer, selectedOps, width, height, onOpClick, backgr
     const scrollableDivRef = useRef(null);
     const getBackground = (data) => {
         if (data.type === "op" && selectedOps.includes(data.id)) {
-            return "yellow"
+            return "#FFE066"
         }
         if(backgroundMap&&backgroundMap[data.id]){
             return backgroundMap[data.id]
         }
-        return "white"
+        return "#FFFFFF"
     }
     useEffect(() => {
         if (selectedOps.length > 0 && scrollableDivRef) {
