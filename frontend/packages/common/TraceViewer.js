@@ -41,7 +41,7 @@ function createStripePattern(color) {
 
 
 
-const baseColors = ['hsl(4, 72%, 63.8%)', 'hsl(340, 65.6%, 57.2%)', 'hsl(291, 51.2%, 46.2%)', 'hsl(262, 41.6%, 51.7%)', 'hsl(231, 38.4%, 52.8%)', 'hsl(207, 72%, 59.4%)', 'hsl(199, 78.4%, 52.8%)', 'hsl(187, 80%, 46.2%)', 'hsl(174, 80%, 31.9%)', 'hsl(122, 31.2%, 53.9%)', 'hsl(88, 40%, 58.3%)', 'hsl(66, 56%, 59.4%)', 'hsl(45, 80%, 56.1%)', 'hsl(36, 80%, 55%)', 'hsl(14, 80%, 62.7%)', 'hsl(16, 20%, 41.8%)', 'hsl(200, 14.4%, 50.6%)', 'hsl(54, 80%, 68.2%)']
+const baseColors = ['hsl(340, 65.6%, 57.2%)', 'hsl(4, 72%, 63.8%)',  'hsl(291, 51.2%, 46.2%)', 'hsl(262, 41.6%, 51.7%)', 'hsl(231, 38.4%, 52.8%)', 'hsl(207, 72%, 59.4%)', 'hsl(199, 78.4%, 52.8%)', 'hsl(187, 80%, 46.2%)', 'hsl(174, 80%, 31.9%)', 'hsl(122, 31.2%, 53.9%)', 'hsl(88, 40%, 58.3%)', 'hsl(66, 56%, 59.4%)', 'hsl(45, 80%, 56.1%)', 'hsl(36, 80%, 55%)', 'hsl(14, 80%, 62.7%)', 'hsl(16, 20%, 41.8%)', 'hsl(200, 14.4%, 50.6%)', 'hsl(54, 80%, 68.2%)']
 
 export const TraceViewer = ({traceData,width, height, onSelect}) => {
     const [showExecutionOnly, setShowExecutionOnly] = useState(true)
@@ -65,6 +65,19 @@ export const TraceViewer = ({traceData,width, height, onSelect}) => {
         if (traceData) {
             let executionRecord = traceData.filter((d) => d.category === "Execution" && d.name === "run")
             let filteredData = showExecutionOnly ?  traceData.filter((d) => !(d.category === "Execution" && d.name === "run")&&d.start >= executionRecord[0].start && d.start <= executionRecord[0].start + executionRecord[0].duration) : traceData
+            // sort it by start time
+            filteredData = filteredData.sort((a, b) => a.start - b.start)
+            filteredData = filteredData.map((d)=>{
+                let tid = d.tid
+                if (d.tid == 0) {
+                    tid = 63
+                }else if (d.tid == 3){
+                     tid = 0
+                }else if (d.tid == 63){
+                    tid = 3
+                }
+                return {...d, tid: tid}
+            })
             let analyzedData = filteredData.reduce((acc, d) => {
                 let event = d
                 if (!acc[d.tid]) {
@@ -84,7 +97,7 @@ export const TraceViewer = ({traceData,width, height, onSelect}) => {
             let numRows = 0
             let maxTime = 0
             let minTime = filteredData.reduce((acc, d) => Math.min(acc, d.start), Infinity)
-            let categoryColors = {}
+            let categoryColors = {"Execution::Step": baseColors[0]}
             let data = []
             let threads = []
             for (let tid in analyzedData) {
@@ -370,7 +383,7 @@ export const TraceViewer = ({traceData,width, height, onSelect}) => {
                             splitters.map((d, i) => <Group>
                                 <Rect x={offsetX + (d - timeRange[0]) * scaleX} y={0} width={1}
                                       height={window.innerHeight} fill={"black"}></Rect>
-                                <Text x={offsetX + (d - timeRange[0]) * scaleX} y={0}
+                                <Text x={offsetX + (d - timeRange[0]) * scaleX+3} y={0}
                                       text={`${formatTime(d)}    step: ${formatTime(splitterStep)}`} fontSize={14}
                                       fill={"black"}></Text>
                             </Group>)
