@@ -62,7 +62,7 @@ def run_sql_query(query_str, db):
 
         # Execute command and capture output
         output = subprocess.check_output(cmd, universal_newlines=True, stderr=subprocess.STDOUT, timeout=20,
-                                         env={**os.environ,"LINGODB_PARALLELISM": "4"})
+                                         env={**os.environ,"LINGODB_PARALLELISM": "4", "LINGODB_EXECUTION_MODE": "BASELINE"})
         # Parse output and skip first and last 4 lines
         splitted = output.split("\n")
         execution_has_error=False
