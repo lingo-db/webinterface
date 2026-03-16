@@ -79,7 +79,7 @@ def run_sql_query(query_str, db):
         times_list = splitted[-1].split()
         query_opt_time=float(times_list[1])
         execution_time=float(times_list[-2])
-        compilation_time = sum(float(t) for t in times_list[2:-1])
+        compilation_time = sum(float(t) for t in times_list[2:-2])
         result = "\n".join(splitted[1:-4])
         table_as_json = table_to_json(raw_table=result)
         return {"result": table_as_json, "timing": {
